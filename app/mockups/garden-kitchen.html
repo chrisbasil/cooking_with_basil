@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Garden Kitchen — Cooking with Basil mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sage:#7a9a4a; --sage-dk:#5a7a32; --sage-lt:#a8be86;
+    --wheat:#c9b47a; --wheat-dk:#a18b4f;
+    --ivory:#faf7ef; --ivory-dp:#f2ecdd;
+    --forest:#2f3a28; --forest-soft:#4f5a48;
+    --blossom:#d9868a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Nunito',system-ui,sans-serif;font-weight:400;
+    color:var(--forest);
+    background:var(--ivory);
+    line-height:1.7;min-height:100vh;
+    position:relative;overflow-x:hidden;
+  }
+  /* ambient leaves */
+  .ambient{position:fixed;pointer-events:none;inset:0;z-index:0;overflow:hidden}
+  .ambient svg{position:absolute;opacity:0;animation:drift 2.2s ease-out forwards}
+  .ambient svg.l1{top:-20px;right:8%;width:110px;animation-delay:.1s}
+  .ambient svg.l2{top:40px;right:22%;width:70px;animation-delay:.4s}
+  .ambient svg.l3{top:10px;right:38%;width:90px;animation-delay:.7s}
+  .ambient svg path{fill:var(--sage);opacity:.18}
+  @keyframes drift{
+    0%{opacity:0;transform:translate(40px,-30px) rotate(-20deg)}
+    100%{opacity:.9;transform:translate(0,0) rotate(0)}
+  }
+  .wrap{max-width:1140px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
+  /* hero */
+  .hero{
+    padding:72px 28px 48px;position:relative;
+    background:linear-gradient(180deg, #eef2e0 0%, var(--ivory) 100%);
+    text-align:center;
+  }
+  .brand-mark{display:inline-flex;align-items:center;gap:12px;margin-bottom:10px;color:var(--sage-dk)}
+  .brand-mark svg{width:28px;height:28px}
+  .brand-mark svg path{fill:var(--sage)}
+  .brand-mark span{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem;letter-spacing:.18em;text-transform:uppercase}
+  .hero h1{
+    font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;
+    font-size:clamp(2.8rem,6vw,4.6rem);line-height:1.05;
+    color:var(--forest);letter-spacing:-.015em;
+  }
+  .hero h1 em{font-style:italic;color:var(--sage-dk)}
+  .hero .sub{
+    margin-top:12px;font-size:1.05rem;color:var(--forest-soft);
+    max-width:520px;margin-left:auto;margin-right:auto;
+  }
+  .divider{
+    display:flex;align-items:center;gap:16px;margin:36px auto 8px;max-width:260px;color:var(--sage);
+  }
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--sage-lt)}
+  .divider svg{width:22px;height:22px}
+  .divider svg path{fill:var(--sage)}
+  /* controls */
+  .controls{padding:28px 0 8px}
+  .search{
+    display:flex;align-items:center;gap:10px;
+    background:#fff;border:1px solid var(--sage-lt);border-radius:40px;
+    padding:12px 22px;max-width:560px;margin:0 auto;
+    box-shadow:0 2px 16px rgba(122,154,74,.08);
+  }
+  .search input{border:0;outline:0;font-size:1rem;flex:1;background:transparent;color:var(--forest);font-family:inherit}
+  .search svg{width:18px;height:18px;stroke:var(--sage-dk);fill:none;stroke-width:2}
+  .pills{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:22px}
+  .pill{
+    font-size:.85rem;font-weight:600;letter-spacing:.04em;
+    padding:7px 16px;border-radius:999px;cursor:pointer;
+    border:1.5px solid var(--sage-lt);color:var(--sage-dk);background:transparent;
+    transition:all .2s;
+  }
+  .pill:hover{border-color:var(--sage);background:rgba(122,154,74,.08)}
+  .pill.active{background:var(--sage);color:#fff;border-color:var(--sage)}
+  /* grid */
+  .grid{
+    display:grid;gap:24px;margin:48px 0;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  }
+  .card{
+    background:#fff;border-radius:16px;padding:26px 24px 22px;
+    position:relative;overflow:hidden;
+    box-shadow:0 2px 18px rgba(47,58,40,.05);
+    border:1px solid rgba(122,154,74,.12);
+    opacity:0;transform:translateY(16px);
+    animation:fadeUp .55s ease forwards;
+    transition:transform .25s, box-shadow .25s;
+  }
+  .card:nth-child(1){animation-delay:.6s}
+  .card:nth-child(2){animation-delay:.72s}
+  .card:nth-child(3){animation-delay:.84s}
+  .card:nth-child(4){animation-delay:.96s}
+  .card:nth-child(5){animation-delay:1.08s}
+  .card:nth-child(6){animation-delay:1.20s}
+  @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+  .card:hover{transform:translateY(-4px);box-shadow:0 12px 34px rgba(47,58,40,.10)}
+  .card:hover .watermark path{opacity:.16}
+  .watermark{
+    position:absolute;right:-22px;bottom:-30px;width:140px;height:140px;
+    pointer-events:none;transition:transform .4s ease;
+  }
+  .watermark path{fill:var(--sage);opacity:.08;transition:opacity .25s}
+  .card:hover .watermark{transform:rotate(-6deg)}
+  .card h3{
+    font-family:'Cormorant Garamond',serif;font-weight:600;
+    font-size:1.55rem;line-height:1.15;letter-spacing:-.01em;
+    color:var(--forest);position:relative;z-index:1;
+  }
+  .meta{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.88rem;color:var(--forest-soft);position:relative;z-index:1}
+  .card-tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px;position:relative;z-index:1}
+  .tag-pill{
+    font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 10px;border-radius:999px;
+    background:var(--ivory-dp);color:var(--forest-soft);
+  }
+  .tag-pill.herb{background:rgba(122,154,74,.16);color:var(--sage-dk)}
+  .tag-pill.warm{background:rgba(201,180,122,.3);color:var(--wheat-dk)}
+  /* detail */
+  .detail{
+    background:#fff;border-radius:20px;padding:44px;margin:24px 0 72px;
+    position:relative;overflow:hidden;
+    box-shadow:0 4px 30px rgba(47,58,40,.06);
+    border:1px solid rgba(122,154,74,.15);
+  }
+  .detail .leaf-bg{
+    position:absolute;top:-60px;right:-60px;width:260px;opacity:.08;
+  }
+  .detail .leaf-bg path{fill:var(--sage)}
+  .detail .kicker{
+    display:inline-block;font-family:'Cormorant Garamond',serif;font-style:italic;
+    color:var(--sage-dk);letter-spacing:.2em;text-transform:uppercase;font-size:.8rem;
+    border-bottom:1px solid var(--sage-lt);padding-bottom:3px;
+  }
+  .detail h2{
+    font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;
+    font-size:2.4rem;margin-top:10px;letter-spacing:-.01em;line-height:1.1;
+  }
+  .detail-meta{display:flex;flex-wrap:wrap;gap:22px;margin:18px 0 22px;color:var(--forest-soft);font-size:.95rem}
+  .detail-meta strong{color:var(--forest);font-weight:700}
+  .detail-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:40px;margin-top:18px;position:relative;z-index:1}
+  .detail-grid h4{
+    font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.25rem;
+    color:var(--sage-dk);margin-bottom:10px;letter-spacing:.02em;
+  }
+  .detail-grid ul{list-style:none;padding:0}
+  .detail-grid li{padding:7px 0;border-bottom:1px solid rgba(122,154,74,.12);font-size:.96rem}
+  .detail-grid ol{padding-left:1.2rem}
+  .detail-grid ol li{border:0;padding:8px 0 8px 6px}
+  @media (max-width:720px){
+    .detail-grid{grid-template-columns:1fr;gap:24px}
+    .detail{padding:28px}
+    .hero{padding:56px 22px 36px}
+  }
+  .mockfooter{text-align:center;padding:24px;color:var(--forest-soft);font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem}
+  .mockfooter a{color:var(--sage-dk)}
+</style>
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true">
+  <svg class="l1" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+  <svg class="l2" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30z"/></svg>
+  <svg class="l3" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30z"/></svg>
+</div>
+
+<header class="hero">
+  <div class="brand-mark">
+    <svg viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <span>Cooking with Basil</span>
+  </div>
+  <h1>From our garden, <em>to your table.</em></h1>
+  <p class="sub">A slow-grown collection of weeknight staples, weekend projects, and the herbs that tie them together.</p>
+  <div class="divider" aria-hidden="true">
+    <svg viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30z"/></svg>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section class="controls">
+  <label class="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input placeholder="Search recipes, tags, or ingredients…">
+  </label>
+  <div class="pills">
+    <span class="pill active">All</span>
+    <span class="pill">Weeknight</span>
+    <span class="pill">Italian</span>
+    <span class="pill">Vegetarian</span>
+    <span class="pill">Desserts</span>
+    <span class="pill">Summer</span>
+    <span class="pill">Entertaining</span>
+  </div>
+</section>
+
+<section class="grid">
+  <article class="card">
+    <svg class="watermark" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Grandma's Pomodoro</h3>
+    <div class="meta"><span>45 min</span><span>·</span><span>serves 6</span></div>
+    <div class="card-tags"><span class="tag-pill warm">italian</span><span class="tag-pill herb">vegetarian</span><span class="tag-pill">weeknight</span></div>
+  </article>
+  <article class="card">
+    <svg class="watermark" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30z"/></svg>
+    <h3>Charred Corn Tacos</h3>
+    <div class="meta"><span>30 min</span><span>·</span><span>serves 4</span></div>
+    <div class="card-tags"><span class="tag-pill warm">mexican</span><span class="tag-pill">weeknight</span></div>
+  </article>
+  <article class="card">
+    <svg class="watermark" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30z"/></svg>
+    <h3>Lemon Herb Roast Chicken</h3>
+    <div class="meta"><span>90 min</span><span>·</span><span>serves 6</span></div>
+    <div class="card-tags"><span class="tag-pill">american</span><span class="tag-pill">weekend</span></div>
+  </article>
+  <article class="card">
+    <svg class="watermark" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Thai Basil Beef</h3>
+    <div class="meta"><span>20 min</span><span>·</span><span>serves 4</span></div>
+    <div class="card-tags"><span class="tag-pill">thai</span><span class="tag-pill">weeknight</span><span class="tag-pill herb">basil</span></div>
+  </article>
+  <article class="card">
+    <svg class="watermark" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30z"/></svg>
+    <h3>Olive Oil Cake</h3>
+    <div class="meta"><span>60 min</span><span>·</span><span>serves 8</span></div>
+    <div class="card-tags"><span class="tag-pill warm">italian</span><span class="tag-pill">dessert</span></div>
+  </article>
+  <article class="card">
+    <svg class="watermark" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Summer Caprese Salad</h3>
+    <div class="meta"><span>15 min</span><span>·</span><span>no cook</span></div>
+    <div class="card-tags"><span class="tag-pill warm">italian</span><span class="tag-pill herb">vegetarian</span><span class="tag-pill">summer</span></div>
+  </article>
+</section>
+
+<section class="detail">
+  <svg class="leaf-bg" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+  <span class="kicker">Summer · Vegetarian</span>
+  <h2>Summer Caprese Salad</h2>
+  <div class="detail-meta">
+    <span><strong>prep</strong> 15 min</span>
+    <span><strong>cook</strong> none</span>
+    <span><strong>serves</strong> 4</span>
+    <span><strong>tags</strong> italian · vegetarian · summer</span>
+  </div>
+  <p>Peak-summer tomatoes, torn mozzarella, and basil picked ten minutes ago. The dressing is just good olive oil and flaky salt — nothing between you and the ingredients.</p>
+  <div class="detail-grid">
+    <div>
+      <h4>Ingredients</h4>
+      <ul>
+        <li>1 lb heirloom tomatoes, mixed sizes</li>
+        <li>8 oz fresh mozzarella, torn</li>
+        <li>1 cup fresh basil leaves</li>
+        <li>3 tbsp extra-virgin olive oil</li>
+        <li>Flaky sea salt</li>
+        <li>Black pepper, freshly cracked</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Instructions</h4>
+      <ol>
+        <li>Slice larger tomatoes into thick rounds; halve the small ones.</li>
+        <li>Arrange tomato and mozzarella on a large platter, overlapping slightly.</li>
+        <li>Tuck basil leaves throughout — don't chop, tear if large.</li>
+        <li>Drizzle generously with olive oil.</li>
+        <li>Finish with flaky salt and pepper. Serve immediately.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="mockfooter">
+  mockup: Garden Kitchen · <a href="index.html">back to all directions</a>
+</div>
+
+</body>
+</html>

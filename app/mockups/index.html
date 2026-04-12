@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cooking with Basil — design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:#1a1612;background:#faf7ef;
+    line-height:1.6;min-height:100vh;padding:56px 24px 80px;
+  }
+  .wrap{max-width:1040px;margin:0 auto}
+  header{text-align:center;margin-bottom:48px}
+  .eyebrow{font-size:.72rem;letter-spacing:.28em;text-transform:uppercase;color:#a17844;font-weight:600}
+  h1{
+    font-family:'Fraunces',Georgia,serif;font-weight:600;
+    font-size:clamp(2rem,4.2vw,3rem);line-height:1.1;margin-top:8px;letter-spacing:-.02em;
+  }
+  h1 em{font-style:italic;color:#2d4a2b}
+  header p{color:#5a5148;max-width:560px;margin:14px auto 0;font-size:1.02rem}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  a.tile{
+    display:block;background:#fff;border:1px solid rgba(26,22,18,.08);
+    border-radius:12px;padding:28px 26px 24px;text-decoration:none;color:inherit;
+    box-shadow:0 1px 2px rgba(26,22,18,.03);
+    transition:transform .2s, box-shadow .2s, border-color .2s;
+  }
+  a.tile:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(26,22,18,.08);border-color:#d4a574}
+  .tile h2{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;letter-spacing:-.01em;margin-bottom:4px}
+  .tile .swatches{display:flex;gap:6px;margin:12px 0 14px}
+  .tile .sw{width:22px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.06)}
+  .tile p{color:#5a5148;font-size:.95rem}
+  .tile .go{margin-top:16px;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:#2d4a2b;font-weight:600}
+  .note{margin-top:48px;padding:20px 24px;border-left:3px solid #d4a574;background:rgba(212,165,116,.08);border-radius:4px;color:#5a5148;font-size:.92rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Design explorations</div>
+    <h1>Cooking <em>with Basil</em> — three directions</h1>
+    <p>Three lightweight mockups of the recipe library, each leaning a different way on warmth, botanical motif, and kitchen iconography. Same dummy recipes in all three, so you can compare apples-to-apples.</p>
+  </header>
+
+  <div class="grid">
+    <a class="tile" href="hybrid.html" style="border-color:#21AC77;box-shadow:0 4px 14px rgba(33,172,119,.18)">
+      <h2>Hybrid — Brighter Bistro ✦</h2>
+      <div class="swatches">
+        <span class="sw" style="background:#F0947B"></span>
+        <span class="sw" style="background:#3C5F81"></span>
+        <span class="sw" style="background:#21AC77"></span>
+        <span class="sw" style="background:#EEE9D0"></span>
+      </div>
+      <p>Trattoria tactile cards + Modern Bistro header, search, and kitchen icons. Brighter palette: coral, slate-blue, basil green on cream. The current direction.</p>
+      <div class="go">View mockup →</div>
+    </a>
+
+    <a class="tile" href="trattoria.html">
+      <h2>Trattoria Warmth</h2>
+      <div class="swatches">
+        <span class="sw" style="background:#b8623a"></span>
+        <span class="sw" style="background:#7a9a4a"></span>
+        <span class="sw" style="background:#f8ecd8"></span>
+        <span class="sw" style="background:#a63838"></span>
+        <span class="sw" style="background:#2b2622"></span>
+      </div>
+      <p>Italian-kitchen coziness. Sienna + cream, chalkboard filter chips, hand-drawn basil sprigs on every card, Playfair + Caveat script. Boldest and most appetite-forward of the three.</p>
+      <div class="go">View mockup →</div>
+    </a>
+
+    <a class="tile" href="garden-kitchen.html">
+      <h2>Garden Kitchen</h2>
+      <div class="swatches">
+        <span class="sw" style="background:#7a9a4a"></span>
+        <span class="sw" style="background:#c9b47a"></span>
+        <span class="sw" style="background:#faf7ef"></span>
+        <span class="sw" style="background:#2f3a28"></span>
+        <span class="sw" style="background:#d9868a"></span>
+      </div>
+      <p>Botanical and airy. Sage-forward, watercolor basil leaves drifting in on load, Cormorant italic display. Fresh daylight feeling — farmer's market rather than restaurant.</p>
+      <div class="go">View mockup →</div>
+    </a>
+
+    <a class="tile" href="modern-bistro.html">
+      <h2>Modern Bistro</h2>
+      <div class="swatches">
+        <span class="sw" style="background:#2d4a2b"></span>
+        <span class="sw" style="background:#d4a574"></span>
+        <span class="sw" style="background:#fdf8f0"></span>
+        <span class="sw" style="background:#1a1612"></span>
+        <span class="sw" style="background:#b8954d"></span>
+      </div>
+      <p>Restrained hospitality. Deep basil + amber, SVG kitchen icons as category markers, Fraunces display with subtle steam animation on the logomark. Most editorial / grown-up of the three.</p>
+      <div class="go">View mockup →</div>
+    </a>
+  </div>
+
+  <div class="note">
+    <strong>How to pick:</strong> open each in its own tab, resize your window, and hover the cards. The mockups use identical dummy recipes so differences are purely visual. You can also say "I want Modern Bistro's palette but Trattoria's chalkboard chips" — we can blend in the rebuild.
+  </div>
+</div>
+</body>
+</html>

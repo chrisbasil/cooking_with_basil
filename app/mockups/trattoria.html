@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trattoria Warmth — Cooking with Basil mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;500;600&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sienna:#b8623a; --sienna-dk:#8f4a2b;
+    --basil:#7a9a4a; --basil-dk:#5a7a32;
+    --cream:#f8ecd8; --cream-dp:#efe0c4;
+    --ink:#3d2817; --ink-soft:#6b5240;
+    --pomodoro:#a63838;
+    --slate:#2b2622;
+    --chalk:#eee4d2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);
+    background:var(--cream);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(184,98,58,.08), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(122,154,74,.07), transparent 40%);
+    line-height:1.55;
+    min-height:100vh;
+  }
+  .wrap{max-width:1140px;margin:0 auto;padding:0 28px}
+  /* Header */
+  .hero{
+    padding:64px 28px 40px;
+    background:
+      linear-gradient(135deg, #c97a4e 0%, #b8623a 40%, #9c4e2e 100%);
+    color:#fff8ea;
+    position:relative;
+    overflow:hidden;
+    border-bottom:6px solid var(--slate);
+  }
+  .hero::after{
+    content:"";position:absolute;left:0;right:0;bottom:-6px;height:16px;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,248,234,.18) 0 8px, transparent 8px 16px);
+  }
+  .hero-inner{max-width:1140px;margin:0 auto;position:relative;z-index:2}
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .brand-sprig{width:38px;height:38px}
+  .brand-sprig path{fill:#e8d488}
+  .hero h1{
+    font-family:'Playfair Display',Georgia,serif;
+    font-weight:700;font-size:clamp(2.2rem,4.6vw,3.6rem);
+    letter-spacing:-.015em;line-height:1.05;
+  }
+  .hero .tag{
+    font-family:'Caveat',cursive;font-size:1.5rem;color:#f4d78a;
+    margin-top:6px;transform:rotate(-2deg);display:inline-block;
+  }
+  .hero .blurb{margin-top:18px;max-width:540px;opacity:.92;font-size:1.02rem}
+  /* Search + filters */
+  .controls{padding:28px 28px 8px}
+  .search{
+    display:flex;align-items:center;gap:10px;
+    background:#fff;border:2px solid var(--ink);border-radius:999px;
+    padding:10px 20px;max-width:560px;
+    box-shadow:4px 4px 0 var(--slate);
+  }
+  .search input{border:0;outline:0;font-size:1rem;flex:1;background:transparent;color:var(--ink);font-family:inherit}
+  .search svg{width:20px;height:20px;stroke:var(--sienna-dk);fill:none;stroke-width:2.2}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+  .chip{
+    font-family:'Caveat',cursive;font-size:1.15rem;font-weight:600;
+    background:var(--slate);color:var(--chalk);
+    padding:6px 18px;border-radius:999px;cursor:pointer;
+    border:1px solid #000;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 2px 2px 0 rgba(0,0,0,.4);
+    letter-spacing:.02em;
+    transition:transform .15s, background .15s;
+    position:relative;
+  }
+  .chip::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(255,255,255,.07) 0 2px, transparent 2px),
+      radial-gradient(circle at 70% 60%, rgba(255,255,255,.05) 0 2px, transparent 2px);
+    pointer-events:none;
+  }
+  .chip.active{background:var(--sienna);color:#fff8ea;border-color:var(--sienna-dk)}
+  .chip:hover{transform:translate(-1px,-1px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 3px 3px 0 rgba(0,0,0,.5)}
+  /* Grid */
+  .grid{
+    display:grid;gap:22px;margin:32px 0 48px;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  }
+  .card{
+    background:#fff8ea;
+    border:1.5px solid var(--ink);
+    border-radius:10px;
+    padding:22px 22px 18px;
+    position:relative;overflow:hidden;
+    box-shadow:5px 5px 0 rgba(61,40,23,.12);
+    transition:transform .2s ease, box-shadow .2s ease;
+    opacity:0;transform:translateY(14px);
+    animation:reveal .5s ease forwards;
+  }
+  .card:nth-child(1){animation-delay:.05s;--rot:-.6deg}
+  .card:nth-child(2){animation-delay:.12s;--rot:.4deg}
+  .card:nth-child(3){animation-delay:.19s;--rot:-.3deg}
+  .card:nth-child(4){animation-delay:.26s;--rot:.7deg}
+  .card:nth-child(5){animation-delay:.33s;--rot:-.5deg}
+  .card:nth-child(6){animation-delay:.40s;--rot:.3deg}
+  @keyframes reveal{
+    to{opacity:1;transform:translateY(0) rotate(var(--rot,0))}
+  }
+  .card:hover{transform:translateY(-3px) rotate(0);box-shadow:7px 7px 0 rgba(61,40,23,.18)}
+  .card:hover .sprig{transform:rotate(14deg) scale(1.08)}
+  .sprig{
+    position:absolute;top:12px;right:12px;width:34px;height:34px;
+    transition:transform .4s ease;transform-origin:bottom left;
+  }
+  .sprig path{fill:var(--basil)}
+  .card h3{
+    font-family:'Playfair Display',serif;font-weight:700;
+    font-size:1.3rem;line-height:1.2;letter-spacing:-.01em;
+    padding-right:42px;color:var(--ink);
+  }
+  .meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px 14px;font-size:.85rem;color:var(--ink-soft)}
+  .meta .dot{color:var(--sienna)}
+  .card-tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px}
+  .tag-pill{
+    font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
+    padding:3px 10px;border-radius:4px;
+    background:var(--cream-dp);color:var(--ink-soft);
+  }
+  .tag-pill.accent{background:var(--pomodoro);color:#fff}
+  .tag-pill.herb{background:var(--basil);color:#fff}
+  /* Detail */
+  .detail{
+    background:#fff8ea;border:1.5px solid var(--ink);border-radius:12px;
+    padding:36px;margin:40px 0 64px;position:relative;
+    box-shadow:6px 6px 0 rgba(61,40,23,.12);
+  }
+  .detail::before{
+    content:"";position:absolute;top:-1.5px;left:0;right:0;height:10px;
+    background:repeating-linear-gradient(45deg,var(--sienna) 0 12px,var(--slate) 12px 24px);
+    border-radius:12px 12px 0 0;
+  }
+  .detail h2{
+    font-family:'Playfair Display',serif;font-size:2rem;margin-top:8px;letter-spacing:-.01em;
+  }
+  .detail .kicker{font-family:'Caveat',cursive;color:var(--sienna-dk);font-size:1.3rem}
+  .detail-meta{display:flex;flex-wrap:wrap;gap:22px;margin:14px 0 22px;color:var(--ink-soft);font-size:.95rem}
+  .detail-meta strong{color:var(--ink);font-weight:600}
+  .detail-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:36px;margin-top:16px}
+  .detail-grid h4{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:10px;color:var(--sienna-dk)}
+  .detail-grid ul{list-style:none;padding:0}
+  .detail-grid li{padding:6px 0;border-bottom:1px dashed rgba(61,40,23,.15);font-size:.95rem}
+  .detail-grid ol{padding-left:1.2rem}
+  .detail-grid ol li{border:0;padding:8px 0 8px 6px}
+  @media (max-width:720px){
+    .detail-grid{grid-template-columns:1fr}
+    .hero{padding:48px 22px 34px}
+  }
+  /* Footer nav */
+  .mockfooter{text-align:center;padding:24px;font-family:'Caveat',cursive;color:var(--ink-soft);font-size:1.15rem}
+  .mockfooter a{color:var(--sienna-dk)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <svg class="brand-sprig" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18c0-6 0-12 6-16-4 8-4 14-4 20M32 52c0-8-4-16-10-20 4 10 6 16 10 20z"/>
+      </svg>
+      <div>
+        <h1>Cooking with Basil</h1>
+        <span class="tag">— a family trattoria —</span>
+      </div>
+    </div>
+    <p class="blurb">Everyday dinners, holiday feasts, and the little sauces worth keeping. Gather the table.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section class="controls">
+  <label class="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input placeholder="search the kitchen…">
+  </label>
+  <div class="chips">
+    <span class="chip active">all</span>
+    <span class="chip">weeknight</span>
+    <span class="chip">italian</span>
+    <span class="chip">vegetarian</span>
+    <span class="chip">desserts</span>
+    <span class="chip">summer</span>
+    <span class="chip">entertaining</span>
+  </div>
+</section>
+
+<section class="grid" id="grid">
+  <!-- cards -->
+  <article class="card">
+    <svg class="sprig" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Grandma's Pomodoro</h3>
+    <div class="meta"><span>⏱ 45 min</span><span class="dot">·</span><span>serves 6</span></div>
+    <div class="card-tags">
+      <span class="tag-pill accent">italian</span>
+      <span class="tag-pill herb">vegetarian</span>
+      <span class="tag-pill">weeknight</span>
+    </div>
+  </article>
+  <article class="card">
+    <svg class="sprig" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Charred Corn Tacos</h3>
+    <div class="meta"><span>⏱ 30 min</span><span class="dot">·</span><span>serves 4</span></div>
+    <div class="card-tags">
+      <span class="tag-pill accent">mexican</span>
+      <span class="tag-pill">weeknight</span>
+    </div>
+  </article>
+  <article class="card">
+    <svg class="sprig" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Lemon Herb Roast Chicken</h3>
+    <div class="meta"><span>⏱ 90 min</span><span class="dot">·</span><span>serves 6</span></div>
+    <div class="card-tags">
+      <span class="tag-pill">american</span>
+      <span class="tag-pill">weekend</span>
+    </div>
+  </article>
+  <article class="card">
+    <svg class="sprig" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Thai Basil Beef</h3>
+    <div class="meta"><span>⏱ 20 min</span><span class="dot">·</span><span>serves 4</span></div>
+    <div class="card-tags">
+      <span class="tag-pill">thai</span>
+      <span class="tag-pill">weeknight</span>
+      <span class="tag-pill herb">basil</span>
+    </div>
+  </article>
+  <article class="card">
+    <svg class="sprig" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Olive Oil Cake</h3>
+    <div class="meta"><span>⏱ 60 min</span><span class="dot">·</span><span>serves 8</span></div>
+    <div class="card-tags">
+      <span class="tag-pill accent">italian</span>
+      <span class="tag-pill">dessert</span>
+    </div>
+  </article>
+  <article class="card">
+    <svg class="sprig" viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    <h3>Summer Caprese Salad</h3>
+    <div class="meta"><span>⏱ 15 min</span><span class="dot">·</span><span>no cook</span></div>
+    <div class="card-tags">
+      <span class="tag-pill accent">italian</span>
+      <span class="tag-pill herb">vegetarian</span>
+      <span class="tag-pill">summer</span>
+    </div>
+  </article>
+</section>
+
+<section class="detail">
+  <div class="kicker">house specialty</div>
+  <h2>Grandma's Pomodoro</h2>
+  <div class="detail-meta">
+    <span><strong>prep</strong> 10 min</span>
+    <span><strong>cook</strong> 35 min</span>
+    <span><strong>serves</strong> 6</span>
+    <span><strong>tags</strong> italian · vegetarian · weeknight</span>
+  </div>
+  <p>A slow-simmered tomato sauce built on soffritto, San Marzano tomatoes, and the last crush of summer basil. Keeps a week in the fridge; freezes beautifully.</p>
+  <div class="detail-grid">
+    <div>
+      <h4>Ingredients</h4>
+      <ul>
+        <li>3 tbsp olive oil</li>
+        <li>1 yellow onion, diced</li>
+        <li>4 cloves garlic, thinly sliced</li>
+        <li>2 × 28oz San Marzano tomatoes</li>
+        <li>1 tsp kosher salt</li>
+        <li>½ tsp sugar</li>
+        <li>1 handful fresh basil, torn</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Instructions</h4>
+      <ol>
+        <li>Warm oil over medium; sweat onion 8 min until soft and translucent.</li>
+        <li>Add garlic; cook 1 min until fragrant — do not brown.</li>
+        <li>Crush tomatoes by hand into the pot. Add salt and sugar.</li>
+        <li>Simmer uncovered 25–30 min, stirring occasionally, until thickened.</li>
+        <li>Off heat, stir in basil. Taste, adjust salt, and serve.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="mockfooter">
+  mockup: Trattoria Warmth · <a href="index.html">back to all directions</a>
+</div>
+
+</body>
+</html>

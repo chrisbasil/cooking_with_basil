@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modern Bistro — Cooking with Basil mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --basil:#2d4a2b; --basil-dk:#1c2f1b; --basil-lt:#4d6a48;
+    --amber:#d4a574; --amber-dk:#a17844;
+    --ink:#1a1612; --ink-soft:#5a5148;
+    --linen:#fdf8f0; --linen-dp:#f1e9d8;
+    --gold:#b8954d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);background:var(--linen);
+    line-height:1.6;min-height:100vh;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+  /* hero */
+  .hero{
+    padding:80px 32px 52px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(212,165,116,.25) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 80%, rgba(45,74,43,.10) 0%, transparent 50%),
+      var(--linen);
+  }
+  .hero-row{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:28px;position:relative;z-index:2}
+  .logomark{width:56px;height:56px;flex-shrink:0;position:relative}
+  .logomark svg{width:100%;height:100%}
+  .logomark svg path{fill:var(--basil)}
+  .steam{position:absolute;top:-18px;left:12px;width:30px;height:30px;pointer-events:none}
+  .steam span{
+    position:absolute;bottom:0;width:3px;height:18px;border-radius:3px;
+    background:linear-gradient(180deg, rgba(45,74,43,0) 0%, rgba(45,74,43,.25) 100%);
+    animation:rise 3.4s ease-in-out infinite;
+  }
+  .steam span:nth-child(1){left:4px;animation-delay:0s}
+  .steam span:nth-child(2){left:14px;animation-delay:.9s;height:22px}
+  .steam span:nth-child(3){left:24px;animation-delay:1.8s}
+  @keyframes rise{
+    0%{transform:translateY(6px) scaleY(.6);opacity:0}
+    30%{opacity:.7}
+    100%{transform:translateY(-20px) scaleY(1.1);opacity:0}
+  }
+  .brand-text .eyebrow{
+    font-size:.75rem;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--amber-dk);font-weight:600;
+  }
+  .brand-text h1{
+    font-family:'Fraunces',Georgia,serif;
+    font-weight:600;font-optical-sizing:auto;
+    font-size:clamp(2.6rem,5.2vw,4.2rem);
+    line-height:1;letter-spacing:-.025em;
+    color:var(--ink);margin-top:4px;
+  }
+  .brand-text h1 em{font-style:italic;font-weight:500;color:var(--basil)}
+  .hero-blurb{
+    max-width:620px;margin-top:24px;color:var(--ink-soft);font-size:1.08rem;
+    position:relative;z-index:2;
+  }
+  .hairline{height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:40px 0 0}
+  /* category icon bar */
+  .categories{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:28px;
+    padding:28px 0 8px;
+  }
+  .cat{
+    display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;
+    padding:10px 14px 8px;position:relative;min-width:84px;
+    color:var(--ink-soft);transition:color .2s;
+  }
+  .cat svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .cat span{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  .cat::after{
+    content:"";position:absolute;left:20%;right:20%;bottom:0;height:2px;
+    background:var(--amber);transform:scaleX(0);transform-origin:center;transition:transform .35s ease;
+  }
+  .cat:hover,.cat.active{color:var(--ink)}
+  .cat.active::after{transform:scaleX(1)}
+  /* search bar */
+  .search-row{padding:24px 0 4px;display:flex;justify-content:center}
+  .search{
+    display:flex;align-items:center;gap:12px;
+    background:#fff;border:1px solid rgba(26,22,18,.12);border-radius:6px;
+    padding:14px 22px;width:100%;max-width:640px;
+    box-shadow:0 1px 0 rgba(26,22,18,.04);
+  }
+  .search:focus-within{border-color:var(--basil);box-shadow:0 0 0 3px rgba(45,74,43,.08)}
+  .search input{border:0;outline:0;font-size:1rem;flex:1;background:transparent;color:var(--ink);font-family:inherit}
+  .search svg{width:18px;height:18px;stroke:var(--ink-soft);fill:none;stroke-width:2}
+  /* grid */
+  .grid{
+    display:grid;gap:28px;margin:40px 0 56px;
+    grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  }
+  .card{
+    background:#fff;border-radius:8px;padding:26px 26px 22px;
+    border:1px solid rgba(26,22,18,.08);
+    box-shadow:0 1px 2px rgba(26,22,18,.03);
+    position:relative;
+    opacity:0;transform:translateY(12px);
+    animation:up .5s ease forwards;
+    transition:transform .25s, box-shadow .25s, border-color .25s;
+  }
+  .card:nth-child(1){animation-delay:.05s}
+  .card:nth-child(2){animation-delay:.11s}
+  .card:nth-child(3){animation-delay:.17s}
+  .card:nth-child(4){animation-delay:.23s}
+  .card:nth-child(5){animation-delay:.29s}
+  .card:nth-child(6){animation-delay:.35s}
+  @keyframes up{to{opacity:1;transform:translateY(0)}}
+  .card:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(26,22,18,.09);border-color:var(--amber)}
+  .card .cat-row{
+    display:flex;align-items:center;gap:8px;font-size:.7rem;
+    letter-spacing:.2em;text-transform:uppercase;font-weight:600;
+    color:var(--amber-dk);margin-bottom:10px;
+  }
+  .card .cat-row svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .card h3{
+    font-family:'Fraunces',serif;font-weight:600;
+    font-size:1.4rem;line-height:1.2;letter-spacing:-.015em;
+    color:var(--ink);padding-bottom:12px;
+    position:relative;
+  }
+  .card h3::after{
+    content:"";position:absolute;left:0;bottom:0;width:44px;height:1px;background:var(--gold);
+  }
+  .meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.86rem;color:var(--ink-soft)}
+  .meta strong{color:var(--ink);font-weight:600}
+  .card-tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px}
+  .tag-pill{
+    font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    padding:3px 9px;border-radius:3px;
+    background:var(--linen-dp);color:var(--ink-soft);
+  }
+  .tag-pill.primary{background:var(--basil);color:#fff}
+  .tag-pill.amber{background:var(--amber);color:var(--basil-dk)}
+  /* detail */
+  .detail{
+    background:#fff;border-radius:10px;padding:48px;margin:16px 0 80px;
+    border:1px solid rgba(26,22,18,.08);
+    box-shadow:0 2px 10px rgba(26,22,18,.04);
+    position:relative;
+  }
+  .detail .eyebrow{
+    font-size:.72rem;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--amber-dk);font-weight:700;
+  }
+  .detail h2{
+    font-family:'Fraunces',serif;font-weight:600;
+    font-size:2.6rem;line-height:1.05;letter-spacing:-.02em;
+    margin-top:8px;
+  }
+  .detail h2 em{font-style:italic;color:var(--basil)}
+  .detail-meta{
+    display:flex;flex-wrap:wrap;gap:22px;margin:20px 0 26px;
+    padding:16px 0;border-top:1px solid rgba(26,22,18,.08);border-bottom:1px solid rgba(26,22,18,.08);
+    color:var(--ink-soft);font-size:.92rem;
+  }
+  .detail-meta strong{color:var(--ink);font-weight:700;display:block;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:2px}
+  .detail-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:48px;margin-top:22px}
+  .detail-grid h4{
+    font-family:'Fraunces',serif;font-weight:600;font-size:1.2rem;
+    color:var(--basil);margin-bottom:12px;
+    padding-bottom:8px;border-bottom:1px solid var(--gold);
+  }
+  .detail-grid ul{list-style:none;padding:0}
+  .detail-grid li{padding:8px 0;border-bottom:1px solid rgba(26,22,18,.06);font-size:.95rem}
+  .detail-grid ol{padding-left:0;list-style:none;counter-reset:step}
+  .detail-grid ol li{
+    border:0;padding:10px 0 10px 40px;position:relative;font-size:.98rem;counter-increment:step;
+  }
+  .detail-grid ol li::before{
+    content:counter(step,decimal-leading-zero);
+    position:absolute;left:0;top:10px;
+    font-family:'Fraunces',serif;color:var(--amber-dk);font-weight:600;font-size:.9rem;
+    letter-spacing:.08em;
+  }
+  @media (max-width:720px){
+    .detail-grid{grid-template-columns:1fr;gap:28px}
+    .detail{padding:32px 24px}
+    .hero{padding:56px 24px 40px}
+    .hero-row{flex-direction:column;align-items:flex-start;gap:18px}
+  }
+  .mockfooter{text-align:center;padding:28px;color:var(--ink-soft);font-size:.9rem;letter-spacing:.1em;text-transform:uppercase}
+  .mockfooter a{color:var(--basil);font-weight:600}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-row">
+    <div class="logomark">
+      <div class="steam" aria-hidden="true"><span></span><span></span><span></span></div>
+      <svg viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="eyebrow">Est. Family Kitchen</div>
+      <h1>Cooking <em>with Basil</em></h1>
+    </div>
+  </div>
+  <p class="hero-blurb">A curated library of the dishes we cook most — weeknight staples, weekend projects, and the quiet sauces that hold a week together.</p>
+  <div class="hairline" aria-hidden="true"></div>
+</header>
+
+<div class="wrap">
+
+<nav class="categories" aria-label="categories">
+  <!-- knife / mains -->
+  <div class="cat active">
+    <svg viewBox="0 0 32 32"><path d="M4 26 26 4l2 2L8 28z"/><path d="M18 12l4 4"/></svg>
+    <span>Mains</span>
+  </div>
+  <div class="cat">
+    <svg viewBox="0 0 32 32"><circle cx="16" cy="18" r="8"/><path d="M8 18h16M16 10V4"/><path d="M12 6h8"/></svg>
+    <span>Sides</span>
+  </div>
+  <div class="cat">
+    <svg viewBox="0 0 32 32"><path d="M6 14c0-6 4-10 10-10s10 4 10 10"/><path d="M4 14h24v4a8 8 0 0 1-8 8h-8a8 8 0 0 1-8-8z"/></svg>
+    <span>Soups</span>
+  </div>
+  <div class="cat">
+    <svg viewBox="0 0 32 32"><path d="M16 4c-5 0-9 3-9 7s4 5 4 10v7h10v-7c0-5 4-6 4-10s-4-7-9-7z"/><path d="M11 28h10"/></svg>
+    <span>Sweets</span>
+  </div>
+  <div class="cat">
+    <svg viewBox="0 0 32 32"><path d="M6 10 L26 10 L24 26 L8 26 Z"/><path d="M10 10V6h12v4"/><path d="M13 15l3 6 3-6"/></svg>
+    <span>Drinks</span>
+  </div>
+  <div class="cat">
+    <svg viewBox="0 0 32 32"><path d="M16 6c-5 5-8 9-8 13a8 8 0 0 0 16 0c0-4-3-8-8-13z"/></svg>
+    <span>Basics</span>
+  </div>
+</nav>
+
+<div class="search-row">
+  <label class="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input placeholder="Search recipes, tags, ingredients…">
+  </label>
+</div>
+
+<section class="grid">
+  <article class="card">
+    <div class="cat-row"><svg viewBox="0 0 32 32"><path d="M4 26 26 4l2 2L8 28z"/></svg><span>Sauce</span></div>
+    <h3>Grandma's Pomodoro</h3>
+    <div class="meta"><span><strong>45</strong> min</span><span><strong>6</strong> servings</span></div>
+    <div class="card-tags"><span class="tag-pill primary">italian</span><span class="tag-pill">vegetarian</span><span class="tag-pill">weeknight</span></div>
+  </article>
+  <article class="card">
+    <div class="cat-row"><svg viewBox="0 0 32 32"><path d="M4 26 26 4l2 2L8 28z"/></svg><span>Main</span></div>
+    <h3>Charred Corn Tacos</h3>
+    <div class="meta"><span><strong>30</strong> min</span><span><strong>4</strong> servings</span></div>
+    <div class="card-tags"><span class="tag-pill primary">mexican</span><span class="tag-pill">weeknight</span></div>
+  </article>
+  <article class="card">
+    <div class="cat-row"><svg viewBox="0 0 32 32"><path d="M4 26 26 4l2 2L8 28z"/></svg><span>Main</span></div>
+    <h3>Lemon Herb Roast Chicken</h3>
+    <div class="meta"><span><strong>90</strong> min</span><span><strong>6</strong> servings</span></div>
+    <div class="card-tags"><span class="tag-pill">american</span><span class="tag-pill amber">weekend</span></div>
+  </article>
+  <article class="card">
+    <div class="cat-row"><svg viewBox="0 0 32 32"><path d="M4 26 26 4l2 2L8 28z"/></svg><span>Main</span></div>
+    <h3>Thai Basil Beef</h3>
+    <div class="meta"><span><strong>20</strong> min</span><span><strong>4</strong> servings</span></div>
+    <div class="card-tags"><span class="tag-pill">thai</span><span class="tag-pill">weeknight</span><span class="tag-pill primary">basil</span></div>
+  </article>
+  <article class="card">
+    <div class="cat-row"><svg viewBox="0 0 32 32"><path d="M16 4c-5 0-9 3-9 7s4 5 4 10v7h10v-7c0-5 4-6 4-10s-4-7-9-7z"/></svg><span>Sweet</span></div>
+    <h3>Olive Oil Cake</h3>
+    <div class="meta"><span><strong>60</strong> min</span><span><strong>8</strong> servings</span></div>
+    <div class="card-tags"><span class="tag-pill primary">italian</span><span class="tag-pill">dessert</span></div>
+  </article>
+  <article class="card">
+    <div class="cat-row"><svg viewBox="0 0 32 32"><circle cx="16" cy="18" r="8"/></svg><span>Side</span></div>
+    <h3>Summer Caprese Salad</h3>
+    <div class="meta"><span><strong>15</strong> min</span><span>no cook</span></div>
+    <div class="card-tags"><span class="tag-pill primary">italian</span><span class="tag-pill">vegetarian</span><span class="tag-pill amber">summer</span></div>
+  </article>
+</section>
+
+<section class="detail">
+  <span class="eyebrow">Mains · Quick weeknight</span>
+  <h2>Thai Basil <em>Beef</em></h2>
+  <div class="detail-meta">
+    <div><strong>Prep</strong>5 min</div>
+    <div><strong>Cook</strong>15 min</div>
+    <div><strong>Serves</strong>4</div>
+    <div><strong>Tags</strong>thai · weeknight · basil</div>
+  </div>
+  <p>Minced beef stir-fried hot and fast with garlic, chilis, and a big handful of holy basil. Over jasmine rice with a runny fried egg — about twenty minutes, start to table.</p>
+  <div class="detail-grid">
+    <div>
+      <h4>Ingredients</h4>
+      <ul>
+        <li>1 lb ground beef (80/20)</li>
+        <li>4 cloves garlic, minced</li>
+        <li>2–3 Thai chilies, sliced</li>
+        <li>2 tbsp soy sauce</li>
+        <li>1 tbsp oyster sauce</li>
+        <li>1 tsp sugar</li>
+        <li>1 cup holy or Thai basil leaves</li>
+        <li>4 eggs, for serving</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Instructions</h4>
+      <ol>
+        <li>Heat a wok or large skillet over high until smoking.</li>
+        <li>Add oil, then garlic and chilies — stir-fry 15 seconds.</li>
+        <li>Add beef; break up and cook until browned and crisp in spots.</li>
+        <li>Stir in soy, oyster sauce, and sugar. Toss to coat.</li>
+        <li>Off heat, fold in basil until just wilted.</li>
+        <li>Serve over jasmine rice with a fried egg on top.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="mockfooter">
+  Mockup · Modern Bistro · <a href="index.html">All directions</a>
+</div>
+
+</body>
+</html>
