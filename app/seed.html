@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cooking with Basil — Seed Migration</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; background: #f5f0e8; color: #1a1612; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .config { margin: 1rem 0; }
+  label { display: block; font-weight: 600; margin-top: 0.75rem; font-size: 0.85rem; }
+  input { width: 100%; padding: 0.5rem; margin-top: 0.25rem; border: 1px solid #d6cfc2; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
+  button { margin-top: 1rem; padding: 0.6rem 1.5rem; background: #5e7a42; color: #fff; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer; }
+  button:hover { background: #4a6332; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #log { margin-top: 1rem; background: #fff; border: 1px solid #d6cfc2; border-radius: 4px; padding: 1rem; font-family: monospace; font-size: 0.8rem; max-height: 400px; overflow-y: auto; white-space: pre-wrap; }
+  .ok { color: #5e7a42; } .err { color: #b8623a; } .info { color: #8a7e72; }
+</style>
+</head>
+<body>
+<h1>Cooking with Basil — Seed Migration</h1>
+<p>Migrates all recipes from <code>recipes_data.json</code> + 13 staging stubs into Supabase.</p>
+
+<div class="config">
+  <label>Supabase URL</label>
+  <input id="sbUrl" placeholder="https://your-project.supabase.co">
+  <label>Supabase Anon Key</label>
+  <input id="sbKey" placeholder="eyJhbGciOiJIUzI1NiIs...">
+  <label>Your Email (for auth)</label>
+  <input id="email" placeholder="you@example.com">
+  <label>Your Password</label>
+  <input id="password" type="password" placeholder="password">
+</div>
+
+<button id="runBtn" onclick="runMigration()">Run Migration</button>
+<div id="log"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var logEl = document.getElementById('log');
+function log(msg, cls) {
+  var span = document.createElement('span');
+  if (cls) span.className = cls;
+  span.textContent = msg;
+  logEl.appendChild(span);
+  logEl.appendChild(document.createTextNode('\n'));
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ── Staging stubs ──────────────────────────────────────── */
+var STAGING_STUBS = [
+  { title: "Duck Confit", source: "Email from Joel Nazdin, Mar 2021", notes: "PDF attachment. Washington Post recipe, gently edited by Joel. Needs extraction from PDF.", tags: ["duck","french","main"], cuisine: "French" },
+  { title: "Marcella Hazan Bolognese", source: "Email from Tom Blemaster (Bain), Oct 2024", notes: "PPTX attachment. Tom: '60-75 min active, plus 3-4 hours simmering. So worth it.' Typed from a stained Word doc he's used 15 years. Needs extraction.", tags: ["beef","pasta","italian","main"], cuisine: "Italian" },
+  { title: "Khao Soi", source: "Email from Emily Krebs, Dec 2018", notes: "DOCX + JPG from cooking class. Northern Thai noodle curry. Needs extraction.", tags: ["thai","noodles","curry","main"], cuisine: "Thai" },
+  { title: "Lasagna", source: "Email from John Cetta, Mar 2015", notes: "DOCX (Beef Lasagna.docx). Minimal email context. Needs extraction.", tags: ["beef","italian","pasta","main"], cuisine: "Italian" },
+  { title: "Grilled Duck Breast", source: "Email from Joel Nazdin, Oct 2018", notes: "PDF attachment. Joel made this for Nick when Carolyn was traveling. Needs extraction.", tags: ["duck","grilled","main"], cuisine: "French" },
+  { title: "Chocolate Chip Cookies (DoubleTree)", source: "Email from Joel Nazdin, Apr 2020", notes: "PDF. Joel and Carolyn tried during COVID. Carolyn: 'can't go back to Nestle Toll House.' Needs extraction.", tags: ["cookies","dessert","baking"], cuisine: "American" },
+  { title: "Man-Catching Brownies", source: "Email from Eleanor Carpenter, Dec 2009", notes: "Unknown file type attachment. Sent at Christmas to family. Needs extraction and file type detection.", tags: ["brownies","dessert","baking","family-recipe"], cuisine: "American" },
+  { title: "Angel Biscuits", source: "Email from Eleanor Carpenter (Gramele), Dec 2009", notes: "DOC attachment. Gramele offered to help make them together. Needs extraction.", tags: ["biscuits","bread","baking","family-recipe"], cuisine: "American" },
+  { title: "Torte Recipe", source: "Email from Mom (Allison C. Basil), Mar 2011", notes: "Scanned PDF — may need OCR. Companion to chocolate-wafer-torte-crust recipe. Needs extraction.", tags: ["dessert","torte","baking","family-recipe"], cuisine: "American" },
+  { title: "Edamame Hummus", source: "Food Network (self-emailed URL, Jan 2012)", notes: "Original URL likely dead (2012). Try Wayback Machine or search 'Food Network edamame hummus recipe.'", tags: ["appetizer","vegetarian","dip"], cuisine: "American" },
+  { title: "Vegetable Miso Soup", source: "https://www.finecooking.com/recipe/vegetable-miso-soup", notes: "Fine Cooking URL — paywalled/blocked. May need manual browser extraction.", tags: ["soup","vegetarian","japanese"], cuisine: "Japanese" },
+  { title: "Butternut Squash Soup", source: "Email from Eleanor Carpenter (Gramele), Nov 2011", notes: "DOC attachment. Tip: put squash in oven, let sit overnight, easy to scoop. Needs extraction.", tags: ["soup","vegetarian","fall","family-recipe"], cuisine: "American" },
+  { title: "Ice Cream R&D Concepts", source: "Personal DOCX files, Nov 2015", notes: "Concept notes only. Fortunate Sundae has partial ingredients. Trail Mix, Sgt. Pepper, Brownies Edna Mode, Enstrom's are one-liners or empty.", tags: ["dessert","ice-cream","concept"], cuisine: "American" }
+];
+
+/* ── Completeness scoring ───────────────────────────────── */
+function computeCompleteness(r) {
+  var score = 0;
+  if (r.title && r.title.trim()) score += 25;
+  if (r.ingredients && r.ingredients.trim()) score += 30;
+  if (r.instructions && r.instructions.trim()) score += 30;
+  if (r.summary && r.summary.trim()) score += 5;
+  if (r.tags && r.tags.length > 0) score += 5;
+  var hasMeta = r.prep_time || r.cook_time || r.total_time || r.servings || r.yield || r.difficulty || r.cuisine;
+  if (hasMeta) score += 5;
+  return Math.min(score, 100);
+}
+
+/* ── Transform recipe from JSON format to DB format ─────── */
+function transformRecipe(r) {
+  var meta = r.metadata || {};
+  return {
+    title: r.title || 'Untitled',
+    source: r.source || null,
+    added: r.added || null,
+    tags: r.tags || [],
+    summary: r.summary || null,
+    prep_time: meta['prep time'] || null,
+    cook_time: meta['cook time'] || null,
+    total_time: meta['total time'] || null,
+    servings: meta['servings'] || null,
+    yield: meta['yield'] || null,
+    difficulty: meta['difficulty'] || null,
+    cuisine: meta['cuisine'] || null,
+    ingredients: r.ingredients || null,
+    instructions: r.instructions || null,
+    notes: r.notes || null,
+    shopping_tags: r.shopping_tags || null,
+    status: 'complete',
+    import_source: 'seed'
+  };
+}
+
+function transformStub(s) {
+  return {
+    title: s.title,
+    source: s.source || null,
+    added: '2026-03-20',
+    tags: s.tags || [],
+    summary: null,
+    prep_time: null, cook_time: null, total_time: null,
+    servings: null, yield: null,
+    difficulty: null,
+    cuisine: s.cuisine || null,
+    ingredients: null,
+    instructions: null,
+    notes: s.notes || null,
+    shopping_tags: null,
+    status: 'incomplete',
+    import_source: 'staging-migration'
+  };
+}
+
+/* ── Migration ──────────────────────────────────────────── */
+async function runMigration() {
+  var btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  logEl.textContent = '';
+
+  var url = document.getElementById('sbUrl').value.trim();
+  var key = document.getElementById('sbKey').value.trim();
+  var email = document.getElementById('email').value.trim();
+  var password = document.getElementById('password').value.trim();
+
+  if (!url || !key || !email || !password) { log('Fill in all fields.', 'err'); btn.disabled = false; return; }
+
+  log('Connecting to Supabase...', 'info');
+  var sb = supabase.createClient(url, key);
+
+  log('Signing in...', 'info');
+  var authRes = await sb.auth.signInWithPassword({ email: email, password: password });
+  if (authRes.error) {
+    log('Auth failed: ' + authRes.error.message, 'err');
+    log('Trying sign up...', 'info');
+    var signUp = await sb.auth.signUp({ email: email, password: password });
+    if (signUp.error) { log('Sign up also failed: ' + signUp.error.message, 'err'); btn.disabled = false; return; }
+    log('Signed up! You may need to confirm your email, then re-run.', 'info');
+    btn.disabled = false;
+    return;
+  }
+  log('Authenticated as ' + email, 'ok');
+
+  // Load recipes_data.json
+  log('Loading recipes_data.json...', 'info');
+  var resp;
+  try { resp = await fetch('recipes_data.json'); } catch(e) { log('Could not fetch recipes_data.json — make sure this file is served from the same directory.', 'err'); btn.disabled = false; return; }
+  var rawRecipes = await resp.json();
+  log('Loaded ' + rawRecipes.length + ' recipes from JSON.', 'ok');
+
+  // Transform
+  var dbRecipes = rawRecipes.map(function(r) {
+    var rec = transformRecipe(r);
+    rec.completeness = computeCompleteness(rec);
+    return rec;
+  });
+
+  var dbStubs = STAGING_STUBS.map(function(s) {
+    var rec = transformStub(s);
+    rec.completeness = computeCompleteness(rec);
+    return rec;
+  });
+
+  var allRecipes = dbRecipes.concat(dbStubs);
+  log('Total records to insert: ' + allRecipes.length + ' (' + dbRecipes.length + ' complete + ' + dbStubs.length + ' staging stubs)', 'info');
+
+  // Insert in batches of 20
+  var batchSize = 20;
+  var inserted = 0;
+  var errors = 0;
+  for (var i = 0; i < allRecipes.length; i += batchSize) {
+    var batch = allRecipes.slice(i, i + batchSize);
+    var res = await sb.from('recipes').insert(batch);
+    if (res.error) {
+      log('Batch ' + Math.floor(i/batchSize + 1) + ' error: ' + res.error.message, 'err');
+      errors += batch.length;
+    } else {
+      inserted += batch.length;
+      log('Inserted batch ' + Math.floor(i/batchSize + 1) + ' (' + batch.length + ' recipes)', 'ok');
+    }
+  }
+
+  log('');
+  log('=== Migration Complete ===', 'ok');
+  log('Inserted: ' + inserted + '  Errors: ' + errors, inserted > 0 ? 'ok' : 'err');
+  if (errors === 0) log('All ' + allRecipes.length + ' recipes migrated successfully!', 'ok');
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>

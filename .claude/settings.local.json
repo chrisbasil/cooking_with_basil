@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(chmod:*)",
+      "WebFetch(domain:claude.ai)",
+      "Bash(grep -E \"\\\\.md$\")",
+      "Bash(/usr/bin/git status:*)",
+      "Bash(gh auth:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
