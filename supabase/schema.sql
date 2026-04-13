@@ -38,11 +38,12 @@ create index if not exists idx_recipes_title_search on public.recipes using gin(
 -- ── Row Level Security ─────────────────────────────────────
 alter table public.recipes enable row level security;
 
--- Anyone (including anonymous) can read
+-- Only authenticated users can read recipes
 drop policy if exists "Anyone can read recipes" on public.recipes;
-create policy "Anyone can read recipes"
+drop policy if exists "Authenticated users can read recipes" on public.recipes;
+create policy "Authenticated users can read recipes"
   on public.recipes for select
-  using (true);
+  using (auth.role() = 'authenticated');
 
 -- Authenticated users can insert
 drop policy if exists "Authenticated users can insert" on public.recipes;
