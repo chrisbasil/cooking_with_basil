@@ -8,7 +8,11 @@
       "Bash(/usr/bin/git status:*)",
       "Bash(gh auth:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(gh repo:*)",
+      "Bash(git push:*)",
+      "Bash(open:*)"
     ]
   }
 }
