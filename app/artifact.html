@@ -206,7 +206,6 @@ header .stats {
   padding: 1.5rem 1.75rem;
   margin: 0 0 1.75rem;
   position: relative;
-  overflow: hidden;
   box-shadow: 5px 5px 0 var(--shadow-card);
 }
 .welcome-panel.show { display: flex; }
@@ -216,6 +215,7 @@ header .stats {
   top: 0; left: 0; bottom: 0;
   width: 6px;
   background: linear-gradient(180deg, var(--coral) 0%, var(--basil) 100%);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
 }
 .welcome-icon {
   width: 56px;
@@ -262,12 +262,14 @@ header .stats {
   position: relative;
   transition: background 0.2s;
   border: 1.5px solid transparent;
+  z-index: 1;
 }
 .tooltip-wrap:hover, .tooltip-wrap:focus-visible {
   background: var(--basil);
   color: #fff;
   outline: none;
   border-color: var(--basil-dark);
+  z-index: 1000;
 }
 .tooltip-wrap .tooltip {
   position: absolute;
@@ -290,7 +292,7 @@ header .stats {
   transform: translateY(4px);
   transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
   pointer-events: none;
-  z-index: 10;
+  z-index: 1001;
 }
 .tooltip-wrap .tooltip::after {
   content: '';
@@ -1194,8 +1196,8 @@ header .stats {
         <svg viewBox="0 0 64 64"><path d="M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18"/></svg>
       </div>
       <div class="welcome-text">
-        <h3>Welcome to the <em>kitchen</em></h3>
-        <p>Browse recipes freely — sign in to add, edit, or import new dishes to the collection.</p>
+        <h3>Welcome to the <em>Basil Family Kitchen</em></h3>
+        <p>Browse recipes, share your favorites with us, and let us know what you love that you find here!</p>
       </div>
       <div class="welcome-actions">
         <button class="btn btn-primary" onclick="openAuthModal()">Sign In</button>
@@ -1517,8 +1519,12 @@ async function initApp() {
 
   // Listen for auth changes
   sb.auth.onAuthStateChange(function(event, session) {
+    var prevUser = currentUser;
     currentUser = session ? session.user : null;
     updateAuthUI();
+    if (event === 'SIGNED_IN' && !prevUser) {
+      loadRecipes();
+    }
   });
 
   await loadRecipes();
