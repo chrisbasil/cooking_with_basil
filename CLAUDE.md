@@ -55,14 +55,22 @@ Import wizard (in app) handles all recipe ingestion:
 
 No more staging folder — recipes are either complete or flagged incomplete in the DB.
 
-## Tagging Conventions
+## Taxonomy
 
-Tags enable filtering. Use consistent values:
-- **Cuisine:** american, italian, greek, thai, french, mexican, etc.
-- **Protein:** chicken, beef, pork, seafood, vegetarian, etc.
-- **Meal-type:** dinner, lunch, breakfast, appetizer, side, dessert, etc.
-- **Occasion:** weeknight, weekend, entertaining, holiday, etc.
-- **Season:** any, summer, winter, fall, spring
+Vocabularies live in Supabase — **not** hardcoded in JS. The app loads them at
+startup via `loadVocab()` in `app/artifact.html` and caches them on `window.VOCAB`.
+To add or rename a category/cuisine/tag, edit the row in Supabase; no deploy needed.
+
+Tables (see `supabase/schema.sql` + `supabase/migrations/2026-04-12-taxonomy-and-protein.sql`):
+- **categories** — drives the category-nav. Columns: `key`, `label`, `icon_path`, `match_keywords[]`, `sort_order`.
+- **proteins** — `vegetarian` | `fish` | `adaptable` | `meat`. Stored on `recipes.protein` (single-valued, filterable).
+- **cuisines** — canonical lowercase keys (e.g. `italian`). Referenced by `recipes.cuisine` (unenforced).
+- **difficulties** — `easy` | `medium` | `hard`. Referenced by `recipes.difficulty`.
+- **tag_vocab** — open taxonomy keyed by `kind` (`occasion`, `season`, `meal_type`, `style`, `other`). Drives wizard autocomplete.
+
+Recipe tags stay free-form in `recipes.tags text[]`. The wizard uses a `<datalist>`
+against `tag_vocab` for autocomplete but does not reject unseen values — unknown
+tags still surface in the filter dropdown alongside the canonical vocab.
 
 ## Legacy / Cleanup
 

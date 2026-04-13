@@ -25,7 +25,8 @@ create table if not exists public.recipes (
   import_source text,
   completeness int default 0,
   created_by uuid references auth.users(id),
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  protein text -- FK-ish; references proteins(key). See migrations/2026-04-12-taxonomy-and-protein.sql
 );
 
 -- ── Indexes ────────────────────────────────────────────────
@@ -38,24 +39,82 @@ create index if not exists idx_recipes_title_search on public.recipes using gin(
 alter table public.recipes enable row level security;
 
 -- Anyone (including anonymous) can read
+drop policy if exists "Anyone can read recipes" on public.recipes;
 create policy "Anyone can read recipes"
   on public.recipes for select
   using (true);
 
 -- Authenticated users can insert
+drop policy if exists "Authenticated users can insert" on public.recipes;
 create policy "Authenticated users can insert"
   on public.recipes for insert
   with check (auth.role() = 'authenticated');
 
 -- Authenticated users can update
+drop policy if exists "Authenticated users can update" on public.recipes;
 create policy "Authenticated users can update"
   on public.recipes for update
   using (auth.role() = 'authenticated');
 
 -- Authenticated users can delete
+drop policy if exists "Authenticated users can delete" on public.recipes;
 create policy "Authenticated users can delete"
   on public.recipes for delete
   using (auth.role() = 'authenticated');
 
 -- ── Enable Realtime ────────────────────────────────────────
-alter publication supabase_realtime add table public.recipes;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'recipes'
+  ) then
+    alter publication supabase_realtime add table public.recipes;
+  end if;
+end $$;
+
+-- ── Vocab Tables ───────────────────────────────────────────
+-- Drive categories, proteins, cuisines, difficulties, and general tag vocab
+-- from data rather than hardcoded JS. Seeded + normed by
+-- migrations/2026-04-12-taxonomy-and-protein.sql.
+create table if not exists public.categories (
+  key text primary key,
+  label text not null,
+  icon_path text not null,
+  match_keywords text[] not null default '{}',
+  sort_order int not null default 0
+);
+
+create table if not exists public.proteins (
+  key text primary key,
+  label text not null,
+  sort_order int not null default 0
+);
+
+create table if not exists public.cuisines (
+  key text primary key,
+  label text not null
+);
+
+create table if not exists public.difficulties (
+  key text primary key,
+  label text not null,
+  sort_order int not null default 0
+);
+
+create table if not exists public.tag_vocab (
+  key text primary key,
+  label text not null,
+  kind text not null
+);
+
+create index if not exists idx_recipes_protein on public.recipes(protein);
+
+alter table public.categories   enable row level security;
+alter table public.proteins     enable row level security;
+alter table public.cuisines     enable row level security;
+alter table public.difficulties enable row level security;
+alter table public.tag_vocab    enable row level security;
+
+-- RLS: anon read, authenticated write (matches recipes pattern).
+-- Policies created in migrations/2026-04-12-taxonomy-and-protein.sql.
