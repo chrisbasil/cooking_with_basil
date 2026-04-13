@@ -11,7 +11,7 @@ Cooking with Basil is a **home meal planning app** built as a static frontend ba
 ```
 Static Host (GitHub Pages / Netlify / Vercel)
     |
-app/artifact.html  (single-page app — HTML/CSS/JS)
+app/home.html  (single-page app — HTML/CSS/JS)
     |
 Supabase JS Client (CDN)
     |
@@ -24,7 +24,7 @@ Supabase (hosted)
 
 ## Key Files
 
-- **app/artifact.html** — The entire frontend app. Search, filter, view, import wizard, edit/delete, auth.
+- **app/home.html** — The entire frontend app. Search, filter, view, import wizard, edit/delete, auth.
 - **app/seed.html** — One-time migration script to seed Supabase from recipes_data.json + staging stubs.
 - **app/recipes_data.json** — Legacy JSON export of all recipes (backup/reference only).
 - **supabase/schema.sql** — Database schema (run in Supabase SQL Editor to set up).
@@ -39,7 +39,7 @@ Recipes live in a Supabase PostgreSQL `recipes` table with columns:
 
 ## Configuration
 
-In `app/artifact.html`, replace these placeholders with your Supabase project credentials:
+In `app/home.html`, replace these placeholders with your Supabase project credentials:
 ```
 var SUPABASE_URL = 'YOUR_SUPABASE_URL';
 var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
@@ -58,7 +58,7 @@ No more staging folder — recipes are either complete or flagged incomplete in 
 ## Taxonomy
 
 Vocabularies live in Supabase — **not** hardcoded in JS. The app loads them at
-startup via `loadVocab()` in `app/artifact.html` and caches them on `window.VOCAB`.
+startup via `loadVocab()` in `app/home.html` and caches them on `window.VOCAB`.
 To add or rename a category/cuisine/tag, edit the row in Supabase; no deploy needed.
 
 Tables (see `supabase/schema.sql` + `supabase/migrations/2026-04-12-taxonomy-and-protein.sql`):
