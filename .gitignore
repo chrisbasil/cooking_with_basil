@@ -3,3 +3,8 @@ __pycache__/
 .DS_Store
 notes/
 _delete/
+photo_script.py
+recipe_names_mapping.csv
+recipe_photo_mapping.csv
+supabase/reference/
+.claude/settings.local.json

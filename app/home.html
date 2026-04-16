@@ -1545,6 +1545,19 @@ async function initApp() {
   });
 }
 
+/* ── Row shim ────────────────────────────────────────────── */
+// Relational migration (2026-04-13): cuisine/difficulty/protein/tags became
+// *_key FKs + recipe_tags junction. This shim keeps the rest of the UI code
+// working against r.cuisine / r.difficulty / r.protein / r.tags.
+function normalizeRecipe(row) {
+  row.cuisine    = row.cuisine_key    || null;
+  row.difficulty = row.difficulty_key || null;
+  row.protein    = row.protein_key    || null;
+  row.category   = row.category_key   || null;
+  row.tags = (row.recipe_tags || []).map(function(rt) { return rt.tag_key; });
+  return row;
+}
+
 /* ── Vocab Loader ────────────────────────────────────────── */
 async function loadVocab() {
   var results = await Promise.all([
@@ -1753,12 +1766,12 @@ async function doSignOut() {
 
 /* ── Load Recipes from Supabase ──────────────────────────── */
 async function loadRecipes() {
-  var res = await sb.from('recipes').select('*').order('title');
+  var res = await sb.from('recipes').select('*, recipe_tags(tag_key)').order('title');
   if (res.error) {
     showToast('Error loading recipes: ' + res.error.message);
     recipes = [];
   } else {
-    recipes = res.data || [];
+    recipes = (res.data || []).map(normalizeRecipe);
   }
   recipes.forEach(function(r, i) { r._idx = i; });
   populateFilters();
@@ -2730,19 +2743,37 @@ async function saveRecipe() {
   var score = computeCompleteness(r);
   var now = new Date().toISOString();
 
+  // Restrict tag writes to known tag_vocab keys (free-form tags were dropped
+  // by the 2026-04-13 relational migration).
+  var vocabTagKeys = new Set(VOCAB.tagVocab.map(function(t) { return t.key; }));
+  var tagList = (r.tags || [])
+    .map(function(t) { return (t || '').toLowerCase().trim(); })
+    .filter(function(t) { return t && vocabTagKeys.has(t); });
+
+  // Derive category_key from tags/title via categories.match_keywords.
+  var categoryKey = null;
+  var lowerTitle = (r.title || '').toLowerCase();
+  for (var ci = 0; ci < VOCAB.categories.length && !categoryKey; ci++) {
+    var cat = VOCAB.categories[ci];
+    for (var ki = 0; ki < cat.matches.length; ki++) {
+      var kw = cat.matches[ki];
+      if (tagList.indexOf(kw) !== -1 || lowerTitle.indexOf(kw) !== -1) { categoryKey = cat.key; break; }
+    }
+  }
+
   var record = {
     title: r.title || 'Untitled',
     source: r.source || null,
-    tags: r.tags || [],
     summary: r.summary || null,
     prep_time: r.prep_time || null,
     cook_time: r.cook_time || null,
     total_time: r.total_time || null,
     servings: r.servings || null,
     yield: r.yield || null,
-    difficulty: r.difficulty || null,
-    cuisine: r.cuisine || null,
-    protein: r.protein || null,
+    difficulty_key: r.difficulty || null,
+    cuisine_key: r.cuisine || null,
+    protein_key: r.protein || null,
+    category_key: categoryKey,
     ingredients: r.ingredients || null,
     instructions: r.instructions || null,
     notes: r.notes || null,
@@ -2752,19 +2783,31 @@ async function saveRecipe() {
     updated: now
   };
 
-  var res;
+  var res, recipeId;
   if (wizardEditingId) {
     res = await sb.from('recipes').update(record).eq('id', wizardEditingId);
+    recipeId = wizardEditingId;
   } else {
     record.added = new Date().toISOString().slice(0, 10);
     record.import_source = wizardSourceType;
     record.created_by = currentUser ? currentUser.id : null;
-    res = await sb.from('recipes').insert(record);
+    res = await sb.from('recipes').insert(record).select('id').single();
+    recipeId = res.data ? res.data.id : null;
   }
 
   if (res.error) {
     showToast('Error saving: ' + res.error.message);
     return;
+  }
+
+  // Sync recipe_tags: replace the full set for this recipe.
+  if (recipeId) {
+    await sb.from('recipe_tags').delete().eq('recipe_id', recipeId);
+    if (tagList.length) {
+      var tagRows = tagList.map(function(t) { return { recipe_id: recipeId, tag_key: t }; });
+      var tagRes = await sb.from('recipe_tags').insert(tagRows);
+      if (tagRes.error) showToast('Saved recipe, but tag sync failed: ' + tagRes.error.message);
+    }
   }
 
   closeWizard();
