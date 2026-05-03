@@ -1330,21 +1330,26 @@ header .stats {
           <!-- Paste input (default) -->
           <div id="inputPaste">
             <textarea id="pasteText" placeholder="Paste recipe text here..."></textarea>
+            <div style="font-size:0.72rem;color:var(--ink-muted);margin-top:0.35rem">Parsed with Claude AI — review fields before saving.</div>
           </div>
           <!-- URL input -->
           <div id="inputUrl" style="display:none">
             <input type="text" id="urlInput" placeholder="https://www.example.com/recipe/...">
-            <button class="btn btn-sm btn-primary" onclick="fetchUrl()">Fetch</button>
-            <div id="urlStatus" style="font-size:0.75rem;color:var(--ink-muted);margin-top:0.4rem"></div>
+            <button class="btn btn-sm btn-primary" onclick="fetchUrl()">Fetch & Parse</button>
+            <div id="urlStatus" style="font-size:0.75rem;color:var(--ink-muted);margin-top:0.4rem">JSON-LD sites are parsed instantly; others go through Claude AI.</div>
             <div id="urlFallback" style="display:none;margin-top:0.75rem">
-              <p style="font-size:0.78rem;color:var(--ink-muted);margin-bottom:0.3rem">Could not fetch URL directly. Paste the page source below:</p>
+              <p style="font-size:0.78rem;color:var(--ink-muted);margin-bottom:0.3rem">Could not fetch URL directly. Paste the page source below, then click Next:</p>
               <textarea id="urlPasteText" placeholder="Paste the page HTML or text here..."></textarea>
             </div>
           </div>
           <!-- PDF input -->
           <div id="inputPdf" style="display:none">
-            <input type="file" id="pdfFile" accept=".pdf">
-            <div id="pdfStatus" style="font-size:0.75rem;color:var(--ink-muted);margin-top:0.4rem"></div>
+            <input type="file" id="pdfFile" accept=".pdf" onchange="onPdfSelected()">
+            <div id="pdfModeButtons" style="display:none;gap:0.5rem;flex-wrap:wrap;margin-top:0.6rem">
+              <button type="button" class="btn btn-sm btn-primary" onclick="parsePdfText()">Parse text (faster, cheaper)</button>
+              <button type="button" class="btn btn-sm" onclick="parsePdfImages()">Parse as images (for scans)</button>
+            </div>
+            <div id="pdfStatus" style="font-size:0.75rem;color:var(--ink-muted);margin-top:0.4rem">Text mode extracts embedded PDF text. Image mode sends pages to Claude vision — use for scanned/handwritten recipes (max 10 pages).</div>
           </div>
           <!-- Manual: skip to step 3 -->
           <div id="inputManual" style="display:none">
@@ -1505,6 +1510,10 @@ var wizardStep = 0;
 var wizardSourceType = 'paste';
 var wizardEditingId = null; // non-null when editing existing recipe
 var wizardParsed = {};
+var wizardParseMethod = null;        // 'json-ld' | 'claude-text' | 'claude-vision' | null
+var wizardParseWarnings = [];
+var wizardParseUsage = null;
+var wizardSourceInputPreview = '';   // first ~2KB of input, for import_logs
 var currentCategory = null; // null = All; otherwise a CATEGORIES key
 var currentProtein = null;  // null = All; otherwise a proteins.key
 
@@ -2253,11 +2262,17 @@ function openWizard(prefill) {
   wizardEditingId = prefill ? prefill.id : null;
   wizardSourceType = 'paste';
   wizardParsed = {};
+  resetParseState();
 
   // Reset all inputs
   document.getElementById('pasteText').value = '';
   document.getElementById('urlInput').value = '';
   document.getElementById('pdfFile').value = '';
+  var urlPaste = document.getElementById('urlPasteText'); if (urlPaste) urlPaste.value = '';
+  var urlStatus = document.getElementById('urlStatus'); if (urlStatus) urlStatus.textContent = 'JSON-LD sites are parsed instantly; others go through Claude AI.';
+  var urlFallback = document.getElementById('urlFallback'); if (urlFallback) urlFallback.style.display = 'none';
+  var pdfBtns = document.getElementById('pdfModeButtons'); if (pdfBtns) pdfBtns.style.display = 'none';
+  var pdfStatus = document.getElementById('pdfStatus'); if (pdfStatus) pdfStatus.textContent = 'Text mode extracts embedded PDF text. Image mode sends pages to Claude vision — use for scanned/handwritten recipes (max 10 pages).';
 
   // If prefilling from existing recipe (edit mode)
   if (prefill) {
@@ -2312,31 +2327,67 @@ function selectSource(type) {
 }
 
 /* ── Wizard Navigation ───────────────────────────────────── */
-function wizardNext() {
+async function wizardNext() {
   if (wizardStep === 0) {
     // Parse source
     if (wizardSourceType === 'manual') {
       wizardParsed = {};
+      resetParseState();
       wizardStep = 2; // skip preview
     } else if (wizardSourceType === 'paste') {
       var text = document.getElementById('pasteText').value.trim();
       if (!text) { showToast('Paste some recipe text first.'); return; }
-      wizardParsed = parseRecipeText(text);
+      wizardSourceInputPreview = text.slice(0, 2000);
+      showToast('Parsing with Claude…');
+      try {
+        var result = await invokeParser({ kind: 'text', content: text });
+        applyParseResult(result);
+      } catch (e) {
+        showToast('Parse failed: ' + e.message);
+        await logImport({
+          kind: 'text',
+          source: null,
+          parse_method: 'failed',
+          input_preview: wizardSourceInputPreview,
+          error: e.message
+        });
+        return;
+      }
       wizardStep = 1;
     } else if (wizardSourceType === 'url') {
-      var text = document.getElementById('urlPasteText') && document.getElementById('urlPasteText').value.trim();
+      var pastedHtml = document.getElementById('urlPasteText') && document.getElementById('urlPasteText').value.trim();
       var urlVal = document.getElementById('urlInput').value.trim();
-      if (!text && !urlVal) { showToast('Enter a URL or paste page content.'); return; }
-      if (text) {
-        wizardParsed = parseHTML(text);
-        if (!wizardParsed.source && urlVal) wizardParsed.source = urlVal;
-      } else {
-        showToast('Click Fetch first or paste page content below.'); return;
+      if (pastedHtml) {
+        // User hit the fallback textarea — parse that HTML.
+        wizardSourceInputPreview = pastedHtml.slice(0, 2000);
+        showToast('Parsing pasted content with Claude…');
+        try {
+          var result2 = await invokeParser({
+            kind: 'html',
+            content: pastedHtml,
+            source: urlVal || undefined
+          });
+          applyParseResult(result2);
+        } catch (e) {
+          showToast('Parse failed: ' + e.message);
+          await logImport({
+            kind: 'url',
+            source: urlVal || null,
+            parse_method: 'failed',
+            input_preview: wizardSourceInputPreview,
+            error: e.message
+          });
+          return;
+        }
+      } else if (!wizardParsed.title && !wizardParsed.ingredients) {
+        showToast('Click "Fetch & Parse" first, or paste page content in the fallback box.');
+        return;
       }
       wizardStep = 1;
     } else if (wizardSourceType === 'pdf') {
       if (!wizardParsed.title && !wizardParsed.ingredients) {
-        showToast('Upload and wait for PDF processing first.'); return;
+        showToast('Upload a PDF and click a parse mode first.');
+        return;
       }
       wizardStep = 1;
     }
@@ -2362,111 +2413,58 @@ function wizardBack() {
   updateWizardUI();
 }
 
-/* ── Parse Recipe Text ───────────────────────────────────── */
-function parseRecipeText(raw) {
-  var recipe = {};
-  var titleMatch = raw.match(/^#\s+(.+)/m);
-  if (titleMatch) recipe.title = titleMatch[1].trim();
-  else {
-    var firstLine = raw.split('\n').find(function(l) { return l.trim(); });
-    if (firstLine) recipe.title = firstLine.replace(/^#+\s*/, '').trim();
-  }
-  var srcMatch = raw.match(/>\s*Source:\s*(.+)/i);
-  if (srcMatch) recipe.source = srcMatch[1].trim();
-  var tagMatch = raw.match(/>\s*Tags:\s*(.+)/i);
-  if (tagMatch) recipe.tags = tagMatch[1].split(/[,|]/).map(function(t) { return t.trim(); }).filter(Boolean);
+/* ── Parser integration (calls parse-recipe edge function) ─ */
+function resetParseState() {
+  wizardParseMethod = null;
+  wizardParseWarnings = [];
+  wizardParseUsage = null;
+  wizardSourceInputPreview = '';
+}
 
-  var sectionMap = {}; var currentSection = '_preamble';
-  sectionMap[currentSection] = [];
-  raw.split('\n').forEach(function(line) {
-    var headMatch = line.match(/^#{1,3}\s+(.+)/);
-    if (headMatch) { currentSection = headMatch[1].trim().toLowerCase(); if (!sectionMap[currentSection]) sectionMap[currentSection] = []; }
-    else { if (!sectionMap[currentSection]) sectionMap[currentSection] = []; sectionMap[currentSection].push(line); }
-  });
-  function getSec(names) {
-    for (var i = 0; i < names.length; i++) { if (sectionMap[names[i]]) return sectionMap[names[i]].join('\n').trim(); }
-    return '';
-  }
-  recipe.summary = getSec(['summary']);
-  recipe.ingredients = getSec(['ingredients']);
-  recipe.instructions = getSec(['instructions', 'directions', 'steps', 'method']);
-  recipe.notes = getSec(['notes']);
-  recipe.shopping_tags = getSec(['shopping tags', 'shopping_tags']);
+function buildTaxonomy() {
+  return {
+    cuisines: VOCAB.cuisines.map(function(c) { return c.key; }),
+    difficulties: VOCAB.difficulties.map(function(d) { return d.key; }),
+    proteins: VOCAB.proteins.map(function(p) { return p.key; }),
+    categories: VOCAB.categories.map(function(c) { return c.key; }),
+    tags: VOCAB.tagVocab.map(function(t) { return t.key; })
+  };
+}
 
-  var metaSec = getSec(['metadata']);
-  if (metaSec) {
-    metaSec.split('\n').forEach(function(line) {
-      var m = line.match(/\|\s*(.+?)\s*\|\s*(.+?)\s*\|/);
-      if (m && m[1].toLowerCase() !== 'field' && m[1].indexOf('---') === -1) {
-        var key = m[1].trim().toLowerCase().replace(/\s+/g, '_');
-        recipe[key] = m[2].trim();
+async function invokeParser(req) {
+  var body = Object.assign({}, req, { taxonomy: buildTaxonomy() });
+  var res = await sb.functions.invoke('parse-recipe', { body: body });
+  if (res.error) {
+    var msg = res.error.message || 'Parse failed';
+    try {
+      if (res.error.context && typeof res.error.context.json === 'function') {
+        var errJson = await res.error.context.json();
+        if (errJson && errJson.error) msg = errJson.error;
       }
-    });
+    } catch (_e) { /* keep default message */ }
+    throw new Error(msg);
   }
-
-  return recipe;
+  if (!res.data) throw new Error('Parser returned no data');
+  if (res.data.error) throw new Error(res.data.error);
+  return res.data;
 }
 
-/* ── Parse HTML (JSON-LD extraction) ─────────────────────── */
-function parseHTML(html) {
-  var recipe = {};
+function applyParseResult(result) {
+  wizardParsed = result.recipe || {};
+  wizardParseMethod = result.parse_method || null;
+  wizardParseWarnings = Array.isArray(result.warnings) ? result.warnings : [];
+  wizardParseUsage = result.usage || null;
+}
 
-  // Try JSON-LD first
-  var jsonLdMatch = html.match(/<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
-  if (jsonLdMatch) {
-    for (var i = 0; i < jsonLdMatch.length; i++) {
-      var content = jsonLdMatch[i].replace(/<\/?script[^>]*>/gi, '');
-      try {
-        var data = JSON.parse(content);
-        var recipeData = null;
-        if (data['@type'] === 'Recipe') recipeData = data;
-        else if (Array.isArray(data['@graph'])) {
-          recipeData = data['@graph'].find(function(item) { return item['@type'] === 'Recipe'; });
-        }
-        if (recipeData) {
-          recipe.title = recipeData.name || '';
-          recipe.summary = recipeData.description || '';
-          if (recipeData.recipeIngredient) recipe.ingredients = recipeData.recipeIngredient.join('\n');
-          if (recipeData.recipeInstructions) {
-            if (typeof recipeData.recipeInstructions === 'string') {
-              recipe.instructions = recipeData.recipeInstructions;
-            } else if (Array.isArray(recipeData.recipeInstructions)) {
-              recipe.instructions = recipeData.recipeInstructions.map(function(step, idx) {
-                if (typeof step === 'string') return (idx + 1) + '. ' + step;
-                return (idx + 1) + '. ' + (step.text || step.name || '');
-              }).join('\n');
-            }
-          }
-          if (recipeData.prepTime) recipe.prep_time = parseDuration(recipeData.prepTime);
-          if (recipeData.cookTime) recipe.cook_time = parseDuration(recipeData.cookTime);
-          if (recipeData.totalTime) recipe.total_time = parseDuration(recipeData.totalTime);
-          if (recipeData.recipeYield) recipe.servings = Array.isArray(recipeData.recipeYield) ? recipeData.recipeYield[0] : String(recipeData.recipeYield);
-          if (recipeData.recipeCategory) recipe.tags = Array.isArray(recipeData.recipeCategory) ? recipeData.recipeCategory : [recipeData.recipeCategory];
-          if (recipeData.recipeCuisine) recipe.cuisine = Array.isArray(recipeData.recipeCuisine) ? recipeData.recipeCuisine[0] : recipeData.recipeCuisine;
-          break;
-        }
-      } catch(e) { /* skip invalid JSON-LD */ }
+async function logImport(entry) {
+  if (!currentUser) return;
+  try {
+    var row = Object.assign({ created_by: currentUser.id }, entry);
+    if (row.input_preview && row.input_preview.length > 2000) {
+      row.input_preview = row.input_preview.slice(0, 2000);
     }
-  }
-
-  // If JSON-LD didn't work, fall back to plain text parsing
-  if (!recipe.title) {
-    // Strip HTML tags and parse as text
-    var text = html.replace(/<[^>]+>/g, '\n').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    return parseRecipeText(text);
-  }
-
-  return recipe;
-}
-
-function parseDuration(iso) {
-  if (!iso) return '';
-  var m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-  if (!m) return iso;
-  var parts = [];
-  if (m[1]) parts.push(m[1] + ' hr');
-  if (m[2]) parts.push(m[2] + ' min');
-  return parts.join(' ') || iso;
+    await sb.from('import_logs').insert(row);
+  } catch (_e) { /* audit failure is non-fatal */ }
 }
 
 /* ── URL Fetch ───────────────────────────────────────────── */
@@ -2475,75 +2473,155 @@ async function fetchUrl() {
   if (!url) return;
   var statusEl = document.getElementById('urlStatus');
   var fallbackEl = document.getElementById('urlFallback');
-  statusEl.textContent = 'Fetching...';
+  statusEl.textContent = 'Fetching & parsing…';
   fallbackEl.style.display = 'none';
+  wizardSourceInputPreview = url;
 
-  // Try Supabase Edge Function first if available
   try {
-    var res = await sb.functions.invoke('fetch-recipe', { body: { url: url } });
-    if (!res.error && res.data && res.data.html) {
-      wizardParsed = parseHTML(res.data.html);
-      if (!wizardParsed.source) wizardParsed.source = url;
-      statusEl.textContent = 'Fetched successfully! Click Next to continue.';
-      return;
-    }
-  } catch(e) { /* Edge function not deployed, try CORS proxy */ }
-
-  // Try CORS proxy
-  try {
-    var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-    var resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
-    if (resp.ok) {
-      var html = await resp.text();
-      wizardParsed = parseHTML(html);
-      if (!wizardParsed.source) wizardParsed.source = url;
-      statusEl.textContent = 'Fetched successfully! Click Next to continue.';
-      return;
-    }
-  } catch(e) { /* proxy failed */ }
-
-  statusEl.textContent = 'Could not fetch URL automatically.';
-  fallbackEl.style.display = '';
+    var result = await invokeParser({ kind: 'url', content: url });
+    applyParseResult(result);
+    var methodLabel = result.parse_method === 'json-ld'
+      ? 'JSON-LD (free)'
+      : 'Claude AI';
+    statusEl.textContent = 'Parsed via ' + methodLabel + '. Click Next to review.';
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    fallbackEl.style.display = '';
+    await logImport({
+      kind: 'url',
+      source: url,
+      parse_method: 'failed',
+      input_preview: url,
+      error: e.message
+    });
+  }
 }
 
 /* ── PDF Processing ──────────────────────────────────────── */
-(function() {
-  var fileInput = document.getElementById('pdfFile');
-  if (!fileInput) return;
-  fileInput.addEventListener('change', async function() {
-    var file = fileInput.files[0];
-    if (!file) return;
-    var statusEl = document.getElementById('pdfStatus');
-    statusEl.textContent = 'Loading PDF library...';
-
-    // Load pdf.js on demand
-    if (!window.pdfjsLib) {
-      var script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      document.head.appendChild(script);
-      await new Promise(function(resolve) { script.onload = resolve; });
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
-
-    statusEl.textContent = 'Extracting text...';
-    try {
-      var arrayBuf = await file.arrayBuffer();
-      var pdf = await window.pdfjsLib.getDocument({ data: arrayBuf }).promise;
-      var allText = [];
-      for (var p = 1; p <= pdf.numPages; p++) {
-        var page = await pdf.getPage(p);
-        var content = await page.getTextContent();
-        var pageText = content.items.map(function(item) { return item.str; }).join(' ');
-        allText.push(pageText);
-      }
-      var fullText = allText.join('\n\n');
-      wizardParsed = parseRecipeText(fullText);
-      statusEl.textContent = 'Extracted ' + pdf.numPages + ' page(s). Click Next to continue.';
-    } catch(e) {
-      statusEl.textContent = 'Error reading PDF: ' + e.message;
-    }
+async function loadPdfJs() {
+  if (window.pdfjsLib) return;
+  var script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  document.head.appendChild(script);
+  await new Promise(function(resolve, reject) {
+    script.onload = resolve;
+    script.onerror = function() { reject(new Error('Failed to load pdf.js')); };
   });
-})();
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+function onPdfSelected() {
+  var file = document.getElementById('pdfFile').files[0];
+  var btns = document.getElementById('pdfModeButtons');
+  var statusEl = document.getElementById('pdfStatus');
+  resetParseState();
+  wizardParsed = {};
+  if (!file) {
+    btns.style.display = 'none';
+    statusEl.textContent = '';
+    return;
+  }
+  btns.style.display = 'flex';
+  statusEl.textContent = 'Choose a parse mode above (text = cheaper, images = better for scans).';
+}
+
+async function extractPdfText(file) {
+  await loadPdfJs();
+  var arrayBuf = await file.arrayBuffer();
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuf }).promise;
+  var allText = [];
+  for (var p = 1; p <= pdf.numPages; p++) {
+    var page = await pdf.getPage(p);
+    var content = await page.getTextContent();
+    var pageText = content.items.map(function(item) { return item.str; }).join(' ');
+    allText.push(pageText);
+  }
+  return { pageCount: pdf.numPages, text: allText.join('\n\n') };
+}
+
+async function extractPdfImages(file, maxPages) {
+  await loadPdfJs();
+  var arrayBuf = await file.arrayBuffer();
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuf }).promise;
+  var pages = Math.min(pdf.numPages, maxPages);
+  var images = [];
+  for (var p = 1; p <= pages; p++) {
+    var page = await pdf.getPage(p);
+    var viewport = page.getViewport({ scale: 1.5 });
+    var canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    var ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    var dataUrl = canvas.toDataURL('image/png');
+    images.push(dataUrl.replace(/^data:image\/png;base64,/, ''));
+  }
+  return { pageCount: pages, totalPages: pdf.numPages, images: images };
+}
+
+async function parsePdfText() {
+  var file = document.getElementById('pdfFile').files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('pdfStatus');
+  statusEl.textContent = 'Extracting text from PDF…';
+  try {
+    var extracted = await extractPdfText(file);
+    wizardSourceInputPreview = extracted.text.slice(0, 2000);
+    if (!extracted.text.trim()) {
+      throw new Error('No embedded text found. Try "Parse as images" for scanned PDFs.');
+    }
+    statusEl.textContent = 'Parsing ' + extracted.pageCount + ' page(s) with Claude…';
+    var result = await invokeParser({
+      kind: 'text',
+      content: extracted.text,
+      source: file.name
+    });
+    applyParseResult(result);
+    statusEl.textContent = 'Parsed ' + extracted.pageCount + ' page(s). Click Next to review.';
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    await logImport({
+      kind: 'pdf-text',
+      source: file.name,
+      parse_method: 'failed',
+      input_preview: wizardSourceInputPreview || file.name,
+      error: e.message
+    });
+  }
+}
+
+async function parsePdfImages() {
+  var file = document.getElementById('pdfFile').files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('pdfStatus');
+  statusEl.textContent = 'Rendering PDF pages to images…';
+  try {
+    var extracted = await extractPdfImages(file, 10);
+    wizardSourceInputPreview = file.name + ' (image mode, ' + extracted.pageCount + ' pages)';
+    statusEl.textContent = 'Parsing ' + extracted.pageCount + ' page(s) with Claude vision…';
+    var result = await invokeParser({
+      kind: 'images',
+      content: extracted.images,
+      source: file.name
+    });
+    applyParseResult(result);
+    var msg = 'Parsed ' + extracted.pageCount + ' page(s) as images.';
+    if (extracted.totalPages > extracted.pageCount) {
+      msg += ' (PDF has ' + extracted.totalPages + ' pages; capped at 10.)';
+    }
+    statusEl.textContent = msg + ' Click Next to review.';
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    await logImport({
+      kind: 'pdf-image',
+      source: file.name,
+      parse_method: 'failed',
+      input_preview: wizardSourceInputPreview || file.name,
+      error: e.message
+    });
+  }
+}
 
 /* ── Wizard Form Populate/Collect ────────────────────────── */
 function populateCategorySelect() {
@@ -2668,6 +2746,35 @@ function updateCompleteness() {
 function renderParsePreview() {
   var el = document.getElementById('parsePreview');
   el.textContent = '';
+
+  if (wizardParseMethod) {
+    var methodLabel = wizardParseMethod === 'json-ld' ? 'Parsed from JSON-LD (free)'
+      : wizardParseMethod === 'claude-text' ? 'Parsed by Claude (text)'
+      : wizardParseMethod === 'claude-vision' ? 'Parsed by Claude (vision)'
+      : wizardParseMethod;
+    var pill = document.createElement('div');
+    pill.style.cssText = 'display:inline-block;padding:0.2rem 0.65rem;border-radius:999px;font-size:0.72rem;background:var(--cream);color:var(--ink-muted);margin-bottom:0.75rem';
+    pill.textContent = methodLabel;
+    el.appendChild(pill);
+  }
+
+  if (wizardParseWarnings && wizardParseWarnings.length) {
+    var warnWrap = document.createElement('div');
+    warnWrap.style.cssText = 'background:rgba(255,200,100,0.15);border-left:3px solid var(--amber);padding:0.5rem 0.75rem;margin-bottom:0.8rem;font-size:0.78rem;border-radius:4px';
+    var warnTitle = document.createElement('strong');
+    warnTitle.textContent = 'Parser warnings';
+    warnWrap.appendChild(warnTitle);
+    var ul = document.createElement('ul');
+    ul.style.cssText = 'margin:0.3rem 0 0 1rem;padding:0';
+    wizardParseWarnings.forEach(function(w) {
+      var li = document.createElement('li');
+      li.textContent = w;
+      ul.appendChild(li);
+    });
+    warnWrap.appendChild(ul);
+    el.appendChild(warnWrap);
+  }
+
   var r = wizardParsed;
   var fields = [
     ['Title', r.title],
@@ -2808,6 +2915,25 @@ async function saveRecipe() {
       var tagRes = await sb.from('recipe_tags').insert(tagRows);
       if (tagRes.error) showToast('Saved recipe, but tag sync failed: ' + tagRes.error.message);
     }
+  }
+
+  // Audit: record how this recipe was imported (only for fresh inserts, not edits).
+  if (!wizardEditingId && recipeId) {
+    var logKind = wizardSourceType;
+    if (wizardSourceType === 'pdf') {
+      logKind = wizardParseMethod === 'claude-vision' ? 'pdf-image' : 'pdf-text';
+    }
+    await logImport({
+      kind: logKind,
+      source: record.source || null,
+      parse_method: wizardParseMethod || (wizardSourceType === 'manual' ? 'manual' : null),
+      input_preview: wizardSourceInputPreview,
+      output: r,
+      warnings: wizardParseWarnings,
+      usage: wizardParseUsage,
+      recipe_id: recipeId,
+      error: null
+    });
   }
 
   closeWizard();

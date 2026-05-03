@@ -19,7 +19,7 @@ Supabase (hosted)
 ├── PostgreSQL (recipes table)
 ├── Auth (email-based, invite collaborators)
 ├── Row Level Security (read: public, write: authenticated)
-└── Edge Functions (fetch-recipe: URL scraping for import)
+└── Edge Functions (parse-recipe: URL scrape + Claude-based recipe extraction)
 ```
 
 ## Key Files
@@ -28,7 +28,7 @@ Supabase (hosted)
 - **app/seed.html** — One-time migration script to seed Supabase from recipes_data.json + staging stubs.
 - **app/recipes_data.json** — Legacy JSON export of all recipes (backup/reference only).
 - **supabase/schema.sql** — Database schema (run in Supabase SQL Editor to set up).
-- **supabase/functions/fetch-recipe/index.ts** — Edge Function for CORS-free URL fetching during import.
+- **supabase/functions/parse-recipe/index.ts** — Edge Function: the single source of truth for recipe parsing. Fetches URLs server-side, tries JSON-LD first, falls back to Claude Sonnet 4.6 (tool-use for structured output, prompt caching on the system prompt). Handles `kind: 'url' | 'html' | 'text' | 'images'`.
 - **CONCEPT.md** — Core vision, problem statement, v1 feature set, brand principles.
 - **VALIDATION-PLAN.md** — Kill/continue decision gates, assumption tracker, risk register.
 
@@ -48,10 +48,23 @@ var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 ## Recipe Pipeline
 
 Import wizard (in app) handles all recipe ingestion:
-1. Source selection: paste text, URL, PDF upload, or manual entry
-2. Auto-parsing: extracts fields from text/HTML (JSON-LD support for recipe sites)
-3. Edit & review: user corrects gaps, sees completeness score
-4. Save: writes to Supabase with complete/incomplete status
+1. Source selection: paste text, URL, PDF upload (text mode or image mode), or manual entry
+2. Auto-parsing via the `parse-recipe` edge function:
+   - **URL / HTML**: JSON-LD fast path first (free, instant); falls back to Claude Sonnet 4.6 if the page has no usable JSON-LD.
+   - **Text / pasted content**: Claude Sonnet 4.6 text extraction.
+   - **PDF text mode**: pdf.js extracts embedded text → Claude text extraction. Cheap; works for modern PDFs.
+   - **PDF image mode**: pdf.js renders each page to a PNG → Claude vision. Use for scanned cookbooks / handwritten recipes. Capped at 10 pages.
+3. Edit & review: user corrects gaps, sees parse-method pill + any parser warnings + completeness score.
+4. Save: writes to `recipes` (with FK keys) + syncs `recipe_tags`. Writes an audit row to `import_logs`.
+
+**Edge-function secret**: `ANTHROPIC_API_KEY` must be set via
+`supabase secrets set ANTHROPIC_API_KEY=sk-ant-…` before Claude paths will work.
+The JSON-LD fast path works without the secret.
+
+**Debugging bad imports**: every import attempt (success or failure) writes a
+row to `public.import_logs` with the input preview, parse method, raw parser
+output, warnings, token usage, and linked `recipe_id`. Start there when an
+import looks wrong. See `supabase/migrations/2026-04-16-import-logs.sql`.
 
 No more staging folder — recipes are either complete or flagged incomplete in the DB.
 
@@ -81,3 +94,7 @@ The `_delete/` folder contains files from the pre-Supabase era (markdown recipes
 The core insight from CONCEPT.md: the value is in the **planning layer**, not the recipe database. Competitors do recipe storage; the differentiation is a plan-first workflow (weekly meal planner -> shopping list) with modular recipe components (reusable sauces, bases, grains).
 
 v1 scope: URL recipe import -> clean library -> weekly planner -> shopping list export. No pantry tracking or meal ratings in v1.
+
+## Writing voice
+
+When drafting prose on Chris's behalf in this repo - READMEs, docs, commit messages, user-facing app copy (empty states, error messages, onboarding), CONCEPT.md edits, marketing content, anything written - apply the **chris-voice** skill. The skill is the default for content creation. Skip it only for raw code itself, template-driven technical specs where voice is not the point, or content explicitly meant to mimic someone else's voice. The skill also enforces the no-em-dashes rule.
