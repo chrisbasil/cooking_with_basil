@@ -18,16 +18,16 @@ Supabase JS Client (CDN)
 Supabase (hosted)
 ├── PostgreSQL (recipes table)
 ├── Auth (email-based, invite collaborators)
-├── Row Level Security (read: public, write: authenticated)
+├── Row Level Security (recipes: authenticated read/write; vocab tables: public read)
 └── Edge Functions (parse-recipe: URL scrape + Claude-based recipe extraction)
 ```
 
 ## Key Files
 
 - **app/home.html** — The entire frontend app. Search, filter, view, import wizard, edit/delete, auth.
-- **app/seed.html** — One-time migration script to seed Supabase from recipes_data.json + staging stubs.
-- **app/recipes_data.json** — Legacy JSON export of all recipes (backup/reference only).
+- **app/seed.html** — One-time migration script that seeded Supabase from `recipes_data.json` + staging stubs. Historical; the migration is complete.
 - **supabase/schema.sql** — Database schema (run in Supabase SQL Editor to set up).
+- **private/** — Gitignored folder for local-only files: the photo-scraping script, recipe mapping CSVs, the source URL list, and `private/reference/` SQL dumps. Never pushed. The old `recipes_data.json` export is no longer kept in the repo.
 - **supabase/functions/parse-recipe/index.ts** — Edge Function: the single source of truth for recipe parsing. Fetches URLs server-side, tries JSON-LD first, falls back to Claude Sonnet 4.6 (tool-use for structured output, prompt caching on the system prompt). Handles `kind: 'url' | 'html' | 'text' | 'images'`.
 - **CONCEPT.md** — Core vision, problem statement, v1 feature set, brand principles.
 - **VALIDATION-PLAN.md** — Kill/continue decision gates, assumption tracker, risk register.
@@ -37,13 +37,35 @@ Supabase (hosted)
 Recipes live in a Supabase PostgreSQL `recipes` table with columns:
 `id` (uuid), `title`, `source`, `added`, `updated`, `tags` (text[]), `summary`, `prep_time`, `cook_time`, `total_time`, `servings`, `yield`, `difficulty`, `cuisine`, `ingredients`, `instructions`, `notes`, `shopping_tags`, `status` (complete/incomplete), `import_source`, `completeness` (0-100), `created_by`, `created_at`
 
+### Adding a new table
+
+Supabase stopped auto-granting Data API access to new `public` tables (full enforcement 2026-10-30). `supabase/migrations/2026-05-15-data-api-default-grants.sql` sets default privileges so future tables inherit the right grants — but be explicit in migrations regardless:
+
+```sql
+create table public.<name> ( ... );
+
+grant select on public.<name> to anon;
+grant select, insert, update, delete on public.<name> to authenticated;
+grant all on public.<name> to service_role;
+
+alter table public.<name> enable row level security;
+-- ...policies...
+```
+
+If supabase-js returns `42501`, a grant is missing.
+
 ## Configuration
 
-In `app/home.html`, replace these placeholders with your Supabase project credentials:
+In `app/home.html`, set your Supabase project credentials:
 ```
-var SUPABASE_URL = 'YOUR_SUPABASE_URL';
-var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+var SUPABASE_URL = 'https://<project-ref>.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_...';   // new-style publishable key
 ```
+Use the new publishable key (`sb_publishable_...`), not the legacy anon JWT. The
+legacy JWT API keys are disabled on this project, so the old `eyJ...` anon key no
+longer works. The publishable key is safe to embed in client code; RLS is the
+security boundary. The site deploys from `main` via GitHub Pages, so the key has
+to be committed to `home.html` to reach the live site.
 
 ## Recipe Pipeline
 
@@ -85,9 +107,14 @@ Recipe tags stay free-form in `recipes.tags text[]`. The wizard uses a `<datalis
 against `tag_vocab` for autocomplete but does not reject unseen values — unknown
 tags still surface in the filter dropdown alongside the canonical vocab.
 
-## Legacy / Cleanup
+## Local-only files
 
-The `_delete/` folder contains files from the pre-Supabase era (markdown recipes, staging stubs, INDEX.md, RECIPE-TEMPLATE.md, IMPORT-SOP.md). These can be permanently removed after verifying the Supabase migration is complete.
+Working files that should never be pushed live in the gitignored `private/`
+folder: the photo-scraping script, recipe mapping CSVs, the source URL list, and
+`private/reference/` SQL dumps (vocab rows, a full `recipes_rows.sql` backup, old
+schema snapshots). `.gitignore` ignores `private/` wholesale, plus fixed-path tool
+caches (`.claude/settings.local.json`, `supabase/.temp/`). The pre-Supabase
+`_delete/` folder has been removed.
 
 ## Product Vision
 
