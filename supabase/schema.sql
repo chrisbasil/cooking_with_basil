@@ -119,3 +119,16 @@ alter table public.tag_vocab    enable row level security;
 
 -- RLS: anon read, authenticated write (matches recipes pattern).
 -- Policies created in migrations/2026-04-12-taxonomy-and-protein.sql.
+
+-- ── Data API Default Grants ────────────────────────────────
+-- Supabase removed automatic public-schema grants for new tables: enforced on
+-- new projects from 2026-05-30, all projects from 2026-10-30. Without explicit
+-- grants, supabase-js / PostgREST / GraphQL return 42501. Default privileges
+-- below ensure future tables created in `public` are reachable from the Data
+-- API. RLS policies (declared per table) remain the actual security boundary.
+alter default privileges in schema public
+  grant select on tables to anon;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to authenticated;
+alter default privileges in schema public
+  grant all on tables to service_role;
