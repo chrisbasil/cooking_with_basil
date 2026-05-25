@@ -1,0 +1,22 @@
+# Netlify config for Cooking with Basil.
+# Static site, no build step: publish the repo root as-is.
+
+[build]
+  publish = "."
+
+# Send the bare domain to the app entry point. This is a redirect (302), not a
+# 200 rewrite, on purpose: the browser URL becomes /app/home.html so the page's
+# relative asset paths (assets/categories/*.svg and DB icon_path values) resolve
+# under /app/. A rewrite would leave the URL at / and break those paths.
+[[redirects]]
+  from = "/"
+  to = "/app/home.html"
+  status = 302
+
+# Conservative security headers for all responses.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
