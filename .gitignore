@@ -1,10 +1,11 @@
+# OS / editor cruft
+.DS_Store
 __pycache__/
 *.pyc
-.DS_Store
-notes/
-_delete/
-photo_script.py
-recipe_names_mapping.csv
-recipe_photo_mapping.csv
-supabase/reference/
+
+# Local tool caches (fixed paths — can't live under private/)
 .claude/settings.local.json
+supabase/.temp/
+
+# Private / local-only working files — never pushed
+private/
