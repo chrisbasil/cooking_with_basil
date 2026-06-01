@@ -1,0 +1,19 @@
+# gitleaks config for cooking_with_basil
+# Extends the default ruleset, then allowlists the Supabase keys that are
+# PUBLIC BY DESIGN. The publishable key (sb_publishable_...) is meant to ship in
+# client code; RLS is the security boundary (verified: no RLS-disabled tables).
+# The legacy anon JWT (eyJ...) in git history is harmless — legacy JWT API keys
+# are DISABLED on this project, so that key no longer authenticates.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Supabase publishable/anon keys are public-by-design (RLS-protected)"
+regexes = [
+  '''sb_publishable_[A-Za-z0-9_-]+''',
+  '''SUPABASE_ANON_KEY''',
+]
+# Legacy anon JWT lives only in historical app/artifact.html; key is disabled.
+paths = [
+  '''app/artifact\.html''',
+]
