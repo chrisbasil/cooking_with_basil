@@ -510,6 +510,25 @@ header .stats {
   letter-spacing: 0.04em;
 }
 .sort-btn:hover { background: var(--cream-light); border-color: var(--slate); }
+.recent-btn {
+  padding: 0.65rem 1rem;
+  border: 1.5px solid rgba(60,95,129,0.2);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  background: var(--paper);
+  color: var(--slate);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+.recent-btn:hover { background: var(--cream-light); border-color: var(--slate); }
+.recent-btn.active {
+  color: #fff;
+  background: var(--basil);
+  border-color: var(--basil);
+}
 
 /* ── Active Filter Chips ─────────────────────────────────── */
 .active-filters {
@@ -651,6 +670,20 @@ header .stats {
   border-radius: 0 0 var(--radius) var(--radius);
   z-index: 2;
 }
+.badge-recent {
+  position: absolute;
+  top: 0;
+  right: 1.2rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: var(--basil);
+  color: #fff;
+  padding: 0.22rem 0.6rem 0.18rem;
+  border-radius: 0 0 var(--radius) var(--radius);
+  z-index: 2;
+}
 .no-results {
   padding: 3rem;
   text-align: center;
@@ -702,6 +735,16 @@ header .stats {
   opacity: 0.85;
   line-height: 1;
 }
+.cuisine-subheader {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--coral-dark);
+  letter-spacing: -0.005em;
+  margin: 1.75rem 0 1rem;
+  padding-left: 0.1rem;
+}
+.cuisine-subheader:first-of-type { margin-top: 0.5rem; }
 
 /* ── Card Stagger Animation ──────────────────────────────── */
 @keyframes cardReveal {
@@ -1247,6 +1290,7 @@ header .stats {
       <select class="filter-select" id="tagFilter" onchange="applyFilters()"><option value="">All Tags</option></select>
       <select class="filter-select" id="cuisineFilter" onchange="applyFilters()"><option value="">All Cuisines</option></select>
       <button class="sort-btn" id="sortBtn" onclick="toggleSort()">A &#8211; Z</button>
+      <button class="recent-btn" id="recentBtn" onclick="toggleRecent()">Recent</button>
     </div>
     <div class="active-filters" id="activeFilters"></div>
     <div id="recipeSections"></div>
@@ -1516,6 +1560,8 @@ var wizardParseUsage = null;
 var wizardSourceInputPreview = '';   // first ~2KB of input, for import_logs
 var currentCategory = null; // null = All; otherwise a CATEGORIES key
 var currentProtein = null;  // null = All; otherwise a proteins.key
+var showRecentOnly = false; // true = only recipes added in the last RECENT_DAYS days
+var RECENT_DAYS = 30;
 
 /* ── Supabase Init ───────────────────────────────────────── */
 async function initApp() {
@@ -1873,10 +1919,21 @@ function filterByProtein(btn, term) {
   applyFilters();
 }
 
+function recentCutoff() {
+  var d = new Date();
+  d.setDate(d.getDate() - RECENT_DAYS);
+  return d.toISOString().slice(0, 10);
+}
+
+function isRecent(r) {
+  return !!r.added && r.added >= recentCutoff();
+}
+
 function applyFilters() {
   var query = document.getElementById('searchBox').value.toLowerCase().trim();
   var tagVal = document.getElementById('tagFilter').value;
   var cuiVal = document.getElementById('cuisineFilter').value;
+  var cutoff = recentCutoff();
   var filtered = recipes.filter(function(r) {
     if (query) {
       var haystack = [r.title || '', (r.tags || []).join(' '), r.ingredients || '', r.summary || ''].join(' ').toLowerCase();
@@ -1889,6 +1946,7 @@ function applyFilters() {
       if (!cat || cat.key !== currentCategory) return false;
     }
     if (currentProtein && r.protein !== currentProtein) return false;
+    if (showRecentOnly && (!r.added || r.added < cutoff)) return false;
     return true;
   });
   filtered.sort(function(a, b) {
@@ -1935,6 +1993,12 @@ function toggleSort() {
   applyFilters();
 }
 
+function toggleRecent() {
+  showRecentOnly = !showRecentOnly;
+  document.getElementById('recentBtn').classList.toggle('active', showRecentOnly);
+  applyFilters();
+}
+
 /* ── Render Grid ─────────────────────────────────────────── */
 function renderList(filtered) {
   var container = document.getElementById('recipeSections');
@@ -1973,6 +2037,99 @@ function renderList(filtered) {
   });
 }
 
+var SUBDIVIDE_THRESHOLD = 12;
+
+function formatAddedDate(added) {
+  var d = new Date(added + 'T00:00:00');
+  if (isNaN(d.getTime())) return added;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function groupByCuisine(items) {
+  var buckets = new Map(); // key -> { label, items }
+  var other = [];
+  items.forEach(function(r) {
+    if (!r.cuisine) { other.push(r); return; }
+    if (!buckets.has(r.cuisine)) {
+      buckets.set(r.cuisine, { label: displayValue('cuisine', r.cuisine), items: [] });
+    }
+    buckets.get(r.cuisine).items.push(r);
+  });
+  var groups = Array.from(buckets.values()).sort(function(a, b) { return b.items.length - a.items.length; });
+  if (other.length > 0) groups.push({ label: 'Other', items: other });
+  return groups;
+}
+
+function buildRecipeCard(r, i) {
+  var li = document.createElement('li');
+  li.className = 'recipe-card';
+  li.style.animationDelay = (i * 0.04) + 's';
+  li.onclick = function() { showDetail(r.id); };
+
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var sprig = document.createElementNS(SVG_NS, 'svg');
+  sprig.setAttribute('class', 'card-sprig');
+  sprig.setAttribute('viewBox', '0 0 64 64');
+  sprig.setAttribute('aria-hidden', 'true');
+  var sprigPath = document.createElementNS(SVG_NS, 'path');
+  sprigPath.setAttribute('d', 'M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18');
+  sprig.appendChild(sprigPath);
+  li.appendChild(sprig);
+
+  if (r.status === 'incomplete') {
+    var badge = document.createElement('span');
+    badge.className = 'badge-incomplete';
+    badge.textContent = 'Incomplete';
+    li.appendChild(badge);
+  }
+
+  if (isRecent(r)) {
+    var recentBadge = document.createElement('span');
+    recentBadge.className = 'badge-recent';
+    recentBadge.textContent = 'New';
+    li.appendChild(recentBadge);
+  }
+
+  var titleDiv = document.createElement('div');
+  titleDiv.className = 'title';
+  titleDiv.textContent = r.title;
+  li.appendChild(titleDiv);
+
+  if (r.summary) {
+    var sumDiv = document.createElement('div');
+    sumDiv.className = 'card-summary';
+    sumDiv.textContent = r.summary;
+    li.appendChild(sumDiv);
+  }
+
+  var metaParts = [];
+  if (r.cuisine) metaParts.push(displayValue('cuisine', r.cuisine));
+  if (r.total_time) metaParts.push(r.total_time);
+  else if (r.cook_time) metaParts.push(r.cook_time);
+  if (r.difficulty) metaParts.push(displayValue('difficulty', r.difficulty));
+  if (r.added) metaParts.push(formatAddedDate(r.added));
+
+  if (metaParts.length > 0) {
+    var metaDiv = document.createElement('div');
+    metaDiv.className = 'card-meta';
+    metaParts.forEach(function(m) {
+      var s = document.createElement('span');
+      s.textContent = m;
+      metaDiv.appendChild(s);
+    });
+    li.appendChild(metaDiv);
+  }
+
+  return li;
+}
+
+function buildRecipeGrid(items) {
+  var grid = document.createElement('ul');
+  grid.className = 'recipe-grid';
+  items.forEach(function(r, i) { grid.appendChild(buildRecipeCard(r, i)); });
+  return grid;
+}
+
 function renderSection(container, title, countText, items) {
   var section = document.createElement('div');
   section.className = 'cookbook-section';
@@ -1989,65 +2146,18 @@ function renderSection(container, title, countText, items) {
   header.appendChild(count);
   section.appendChild(header);
 
-  var grid = document.createElement('ul');
-  grid.className = 'recipe-grid';
+  if (items.length > SUBDIVIDE_THRESHOLD) {
+    groupByCuisine(items).forEach(function(group) {
+      var subheader = document.createElement('h3');
+      subheader.className = 'cuisine-subheader';
+      subheader.textContent = group.label;
+      section.appendChild(subheader);
+      section.appendChild(buildRecipeGrid(group.items));
+    });
+  } else {
+    section.appendChild(buildRecipeGrid(items));
+  }
 
-  items.forEach(function(r, i) {
-    var li = document.createElement('li');
-    li.className = 'recipe-card';
-    li.style.animationDelay = (i * 0.04) + 's';
-    li.onclick = function() { showDetail(r.id); };
-
-    var SVG_NS = 'http://www.w3.org/2000/svg';
-    var sprig = document.createElementNS(SVG_NS, 'svg');
-    sprig.setAttribute('class', 'card-sprig');
-    sprig.setAttribute('viewBox', '0 0 64 64');
-    sprig.setAttribute('aria-hidden', 'true');
-    var sprigPath = document.createElementNS(SVG_NS, 'path');
-    sprigPath.setAttribute('d', 'M32 58c0-14 6-24 18-30-6 18-12 24-18 30zM32 58c0-14-6-24-18-30 6 18 12 24 18 30zM32 52V18');
-    sprig.appendChild(sprigPath);
-    li.appendChild(sprig);
-
-    if (r.status === 'incomplete') {
-      var badge = document.createElement('span');
-      badge.className = 'badge-incomplete';
-      badge.textContent = 'Incomplete';
-      li.appendChild(badge);
-    }
-
-    var titleDiv = document.createElement('div');
-    titleDiv.className = 'title';
-    titleDiv.textContent = r.title;
-    li.appendChild(titleDiv);
-
-    if (r.summary) {
-      var sumDiv = document.createElement('div');
-      sumDiv.className = 'card-summary';
-      sumDiv.textContent = r.summary;
-      li.appendChild(sumDiv);
-    }
-
-    var metaParts = [];
-    if (r.cuisine) metaParts.push(displayValue('cuisine', r.cuisine));
-    if (r.total_time) metaParts.push(r.total_time);
-    else if (r.cook_time) metaParts.push(r.cook_time);
-    if (r.difficulty) metaParts.push(displayValue('difficulty', r.difficulty));
-
-    if (metaParts.length > 0) {
-      var metaDiv = document.createElement('div');
-      metaDiv.className = 'card-meta';
-      metaParts.forEach(function(m) {
-        var s = document.createElement('span');
-        s.textContent = m;
-        metaDiv.appendChild(s);
-      });
-      li.appendChild(metaDiv);
-    }
-
-    grid.appendChild(li);
-  });
-
-  section.appendChild(grid);
   container.appendChild(section);
 }
 
