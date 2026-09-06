@@ -2146,7 +2146,8 @@ async function loadRecipes() {
     recipes = (res.data || []).map(normalizeRecipe);
   }
   recipes.forEach(function(r, i) { r._idx = i; });
-  pruneSelection();
+  // Only prune on a real load; a failed load would otherwise wipe the saved selection.
+  if (!res.error) pruneSelection();
   populateFilters();
   applyFilters();
 }
@@ -2847,7 +2848,9 @@ function renderListModal() {
 
   var help = document.createElement('div');
   help.className = 'list-help';
-  help.textContent = 'On iPhone or Mac, Share lets you send this to Reminders or Notes. Plain lines become one reminder per line.';
+  help.textContent = navigator.share
+    ? 'On iPhone or Mac, Share lets you send this to Reminders or Notes. Plain lines become one reminder per line.'
+    : 'Copy, then paste into Reminders or Notes. Plain lines become one reminder per line.';
   body.appendChild(help);
 
   var footer = document.createElement('div');
