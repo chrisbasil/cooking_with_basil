@@ -24,7 +24,7 @@ Supabase (hosted)
 
 ## Key Files
 
-- **app/home.html** — The entire frontend app. Search, filter, view, import wizard, edit/delete, auth.
+- **app/home.html** — The entire frontend app. Search, filter, view, import wizard, edit/delete, auth, and the multi-select shopping list (select recipes, build a combined or per-recipe list, copy / share / download; selection persists in localStorage under `cwb.*` keys).
 - **app/seed.html** — One-time migration script that seeded Supabase from `recipes_data.json` + staging stubs. Historical; the migration is complete.
 - **supabase/schema.sql** — Database schema (run in Supabase SQL Editor to set up).
 - **private/** — Gitignored folder for local-only files: the photo-scraping script, recipe mapping CSVs, the source URL list, and `private/reference/` SQL dumps. Never pushed. The old `recipes_data.json` export is no longer kept in the repo.
