@@ -1,0 +1,12 @@
+{
+  "name": "Cooking with Basil",
+  "short_name": "Basil",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "theme_color": "#21AC77",
+  "background_color": "#F1EDDB",
+  "display": "standalone",
+  "start_url": "/app/home.html"
+}

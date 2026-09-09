@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -48,7 +48,7 @@ to be committed to `home.html` to reach the live site.
 ## Recipe Pipeline
 
 **Edge-function secret**: `ANTHROPIC_API_KEY` must be set via
-`supabase secrets set ANTHROPIC_API_KEY=sk-ant-…` before Claude paths will work.
+`supabase secrets set ANTHROPIC_API_KEY=sk-ant-…` before Codex paths will work.
 The JSON-LD fast path works without the secret.
 
 **Debugging bad imports**: every import attempt (success or failure) writes a
