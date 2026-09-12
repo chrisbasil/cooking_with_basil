@@ -408,6 +408,9 @@ header .stats:empty { display: none; }
 }
 .btn:hover { background: var(--cream-light); border-color: var(--slate); }
 .btn:active { background: var(--cream-deep); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled:hover { background: var(--paper); border-color: var(--rule-strong); }
+.btn-primary:disabled:hover { background: var(--basil-dark); border-color: var(--basil-dark); }
 .btn-primary {
   background: var(--basil-dark);
   color: #fff;
@@ -1320,27 +1323,77 @@ body.has-selection { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0
 .seg button.active { background: var(--basil-dark); color: #fff; }
 .seg button.active:hover { background: var(--basil-dark); color: #fff; }
 
-.list-preview {
-  display: block;
+.list-items {
   width: 100%;
   min-height: 200px;
   max-height: 46vh;
-  padding: 0.85rem 1rem;
+  padding: 0.4rem 0.5rem;
   border: 1.5px solid var(--rule);
   border-radius: var(--radius);
   background: var(--cream-light);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  line-height: 1.6;
-  tab-size: 2;
-  resize: vertical;
-  outline: none;
-  white-space: pre;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
-.list-preview:focus { border-color: var(--basil); box-shadow: var(--focus-ring); }
+.list-group-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--slate);
+  padding: 0.6rem 0.5rem 0.3rem;
+  border-bottom: 1px solid var(--rule-light);
+  margin-bottom: 0.2rem;
+}
+.list-items .list-group-title:first-child { padding-top: 0.35rem; }
+.list-group-empty {
+  padding: 0.35rem 0.5rem 0.5rem;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+.list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-height: 36px;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink);
+  cursor: pointer;
+}
+.list-item:hover { background: var(--paper); }
+.list-item input {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  margin: 0.15rem 0 0;
+  accent-color: var(--basil-dark);
+  cursor: pointer;
+}
+.list-item input:focus-visible { outline: 2px solid var(--basil); outline-offset: 2px; }
+.list-item.excluded span { text-decoration: line-through; color: var(--ink-muted); }
+
+.list-hidden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+.btn-link-inline {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--basil-dark);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.btn-link-inline:hover { color: var(--slate); }
 .list-note { font-size: 0.8rem; color: var(--amber-text); margin-top: 0.5rem; }
 .list-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
 .list-help { font-size: 0.8rem; color: var(--ink-muted); margin-top: 0.6rem; line-height: 1.5; }
@@ -1478,7 +1531,7 @@ body.has-selection { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0
   .list-actions .btn { flex: 1 1 auto; }
   .list-footer { flex-direction: column-reverse; align-items: stretch; }
   .list-footer .btn { width: 100%; }
-  .list-preview { max-height: 40vh; }
+  .list-items { max-height: 40vh; }
 }
 
 @media (max-width: 400px) {
@@ -1494,6 +1547,8 @@ body.has-selection { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0
   }
   .modal-close, .tooltip-wrap { width: 40px; }
   .card-select::after { inset: -10px; }
+  .list-item { min-height: 42px; padding: 0.5rem; }
+  .list-item input { width: 20px; height: 20px; margin-top: 0.1rem; }
 }
 
 /* ── Reduced motion ──────────────────────────────────────── */
@@ -1524,8 +1579,7 @@ body.has-selection { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0
 .wiz-form-group textarea:focus-visible,
 .wiz-form-group select:focus-visible,
 .source-input-area textarea:focus-visible,
-.source-input-area input:focus-visible,
-.list-preview:focus-visible {
+.source-input-area input:focus-visible {
   outline: none;
 }
 .recipe-card:focus-within { border-color: var(--basil); }
@@ -1880,9 +1934,11 @@ var RECENT_DAYS = 30;
 var selectedIds = new Set(); // recipe ids picked for the shopping list
 var listView = 'combined';   // 'combined' | 'byrecipe'
 var listFormat = 'plain';    // 'plain' | 'checklist'
+var excludedItems = new Set(); // normalized ingredient lines the cook already has
 var SEL_KEY = 'cwb.selectedRecipes';
 var LIST_VIEW_KEY = 'cwb.listView';
 var LIST_FORMAT_KEY = 'cwb.listFormat';
+var EXCL_KEY = 'cwb.excludedItems';
 
 /* ── Supabase Init ───────────────────────────────────────── */
 async function initApp() {
@@ -2636,6 +2692,13 @@ function loadSelectionState() {
       if (Array.isArray(arr)) arr.forEach(function(id) { if (id) selectedIds.add(id); });
     } catch (e) {}
   }
+  var rawX = lsGet(EXCL_KEY);
+  if (rawX) {
+    try {
+      var xs = JSON.parse(rawX);
+      if (Array.isArray(xs)) xs.forEach(function(k) { if (k) excludedItems.add(k); });
+    } catch (e) {}
+  }
   var v = lsGet(LIST_VIEW_KEY);
   if (v === 'combined' || v === 'byrecipe') listView = v;
   var f = lsGet(LIST_FORMAT_KEY);
@@ -2643,6 +2706,19 @@ function loadSelectionState() {
 }
 function saveSelection() {
   lsSet(SEL_KEY, JSON.stringify(Array.from(selectedIds)));
+}
+function saveExclusions() {
+  lsSet(EXCL_KEY, JSON.stringify(Array.from(excludedItems)));
+}
+function itemKey(text) { return String(text).toLowerCase(); }
+function toggleExcluded(key) {
+  if (excludedItems.has(key)) excludedItems.delete(key); else excludedItems.add(key);
+  saveExclusions();
+}
+function restoreExcluded() {
+  excludedItems.clear();
+  saveExclusions();
+  renderListModal();
 }
 function pruneSelection() {
   var known = new Set(recipes.map(function(r) { return r.id; }));
@@ -2663,7 +2739,9 @@ function toggleSelected(id) {
 }
 function clearSelection() {
   selectedIds.clear();
+  excludedItems.clear();
   saveSelection();
+  saveExclusions();
   updateSelectionUI();
   closeListModal();
 }
@@ -2721,17 +2799,23 @@ function dedupeLines(lines) {
 function formatItem(item) {
   return listFormat === 'checklist' ? '- [ ] ' + item : item;
 }
-function buildListText() {
+// The single source of truth for both the interactive list and the exported
+// text. Groups are one per recipe in "by recipe" view, one unnamed group in
+// "combined" view. Excluded items stay in the model so they can be shown
+// struck through and toggled back on.
+function buildListModel() {
   var picked = selectedRecipes();
   var skipped = [];
-  var lines = [];
+  var groups = [];
+  function toItems(lines) {
+    return dedupeLines(lines).map(function(t) {
+      var k = itemKey(t);
+      return { text: t, key: k, excluded: excludedItems.has(k) };
+    });
+  }
   if (listView === 'byrecipe') {
-    picked.forEach(function(r, idx) {
-      var items = parseIngredientLines(r.ingredients);
-      if (idx > 0) lines.push('');
-      lines.push(r.title || 'Untitled');
-      if (items.length === 0) { lines.push('(no ingredients recorded)'); return; }
-      dedupeLines(items).forEach(function(it) { lines.push(formatItem(it)); });
+    picked.forEach(function(r) {
+      groups.push({ title: r.title || 'Untitled', items: toItems(parseIngredientLines(r.ingredients)) });
     });
   } else {
     var all = [];
@@ -2740,9 +2824,28 @@ function buildListText() {
       if (items.length === 0) { skipped.push(r.title || 'Untitled'); return; }
       all = all.concat(items);
     });
-    dedupeLines(all).forEach(function(it) { lines.push(formatItem(it)); });
+    groups.push({ title: null, items: toItems(all) });
   }
-  return { text: lines.join('\n'), skipped: skipped, count: picked.length };
+  var hidden = 0, kept = 0;
+  groups.forEach(function(g) {
+    g.items.forEach(function(it) { if (it.excluded) hidden++; else kept++; });
+  });
+  return { groups: groups, skipped: skipped, count: picked.length, hidden: hidden, kept: kept };
+}
+function buildListText() {
+  var model = buildListModel();
+  var lines = [];
+  model.groups.forEach(function(g, idx) {
+    var kept = g.items.filter(function(it) { return !it.excluded; });
+    if (g.title !== null) {
+      if (idx > 0) lines.push('');
+      lines.push(g.title);
+      if (g.items.length === 0) { lines.push('(no ingredients recorded)'); return; }
+      if (kept.length === 0) { lines.push('(nothing to buy)'); return; }
+    }
+    kept.forEach(function(it) { lines.push(formatItem(it.text)); });
+  });
+  return { text: lines.join('\n'), skipped: model.skipped, count: model.count, hidden: model.hidden };
 }
 
 function openListModal() {
@@ -2781,6 +2884,14 @@ function renderListModal() {
   var picked = selectedRecipes();
   var body = document.getElementById('listModalBody');
   var sub = document.getElementById('listModalSubtitle');
+  var prevItems = document.getElementById('listItems');
+  var prevScroll = prevItems ? prevItems.scrollTop : 0;
+  // Toggling an item re-renders the body, so remember which checkbox had focus.
+  var prevFocus = -1;
+  if (prevItems && document.activeElement && document.activeElement.parentNode &&
+      document.activeElement.parentNode.classList.contains('list-item')) {
+    prevFocus = Array.prototype.indexOf.call(prevItems.querySelectorAll('input'), document.activeElement);
+  }
   body.textContent = '';
   sub.textContent = picked.length + (picked.length === 1 ? ' recipe' : ' recipes');
 
@@ -2814,48 +2925,104 @@ function renderListModal() {
   opts.appendChild(makeSeg('Format', [['plain', 'Plain lines'], ['checklist', 'Checklist']], listFormat, setListFormat));
   body.appendChild(opts);
 
-  var built = buildListText();
-  var ta = document.createElement('textarea');
-  ta.className = 'list-preview';
-  ta.id = 'listPreview';
-  ta.readOnly = true;
-  ta.setAttribute('aria-label', 'Shopping list preview');
-  ta.value = built.text;
-  body.appendChild(ta);
+  var model = buildListModel();
+  var items = document.createElement('div');
+  items.className = 'list-items';
+  items.id = 'listItems';
+  items.setAttribute('role', 'group');
+  items.setAttribute('aria-label', 'Shopping list items');
+  model.groups.forEach(function(g) {
+    if (g.title !== null) {
+      var h = document.createElement('div');
+      h.className = 'list-group-title';
+      h.textContent = g.title;
+      items.appendChild(h);
+    }
+    if (g.items.length === 0) {
+      var none = document.createElement('div');
+      none.className = 'list-group-empty';
+      none.textContent = '(no ingredients recorded)';
+      items.appendChild(none);
+      return;
+    }
+    g.items.forEach(function(it) {
+      var row = document.createElement('label');
+      row.className = 'list-item' + (it.excluded ? ' excluded' : '');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !it.excluded;
+      cb.onchange = function() { toggleExcluded(it.key); renderListModal(); };
+      var span = document.createElement('span');
+      span.textContent = it.text;
+      row.appendChild(cb);
+      row.appendChild(span);
+      items.appendChild(row);
+    });
+  });
+  body.appendChild(items);
+  // Put the scroll position and keyboard focus back where they were.
+  if (prevScroll) items.scrollTop = prevScroll;
+  if (prevFocus > -1) {
+    var boxes = items.querySelectorAll('input');
+    if (boxes[prevFocus]) boxes[prevFocus].focus();
+  }
 
-  if (built.skipped.length) {
+  if (model.hidden) {
+    var hid = document.createElement('div');
+    hid.className = 'list-hidden';
+    var hidText = document.createElement('span');
+    hidText.textContent = model.hidden + (model.hidden === 1 ? ' item off the list' : ' items off the list');
+    var restore = document.createElement('button');
+    restore.type = 'button';
+    restore.className = 'btn-link-inline';
+    restore.textContent = model.hidden === 1 ? 'Put it back' : 'Put them all back';
+    restore.onclick = restoreExcluded;
+    hid.appendChild(hidText);
+    hid.appendChild(restore);
+    body.appendChild(hid);
+  }
+
+  if (model.skipped.length) {
     var note = document.createElement('div');
     note.className = 'list-note';
-    note.textContent = 'Skipped, no ingredients: ' + built.skipped.join(', ');
+    note.textContent = 'Skipped, no ingredients: ' + model.skipped.join(', ');
     body.appendChild(note);
   }
 
+  var nothingLeft = model.kept === 0;
   var actions = document.createElement('div');
   actions.className = 'list-actions';
   var copyBtn = document.createElement('button');
   copyBtn.className = 'btn btn-primary';
   copyBtn.textContent = 'Copy';
+  copyBtn.disabled = nothingLeft;
   copyBtn.onclick = copyListText;
   actions.appendChild(copyBtn);
   if (navigator.share) {
     var shareBtn = document.createElement('button');
     shareBtn.className = 'btn';
     shareBtn.textContent = 'Share';
+    shareBtn.disabled = nothingLeft;
     shareBtn.onclick = shareListText;
     actions.appendChild(shareBtn);
   }
   var dlBtn = document.createElement('button');
   dlBtn.className = 'btn';
   dlBtn.textContent = 'Download .txt';
+  dlBtn.disabled = nothingLeft;
   dlBtn.onclick = downloadListText;
   actions.appendChild(dlBtn);
   body.appendChild(actions);
 
   var help = document.createElement('div');
   help.className = 'list-help';
-  help.textContent = navigator.share
-    ? 'On iPhone or Mac, Share lets you send this to Reminders or Notes. Plain lines become one reminder per line.'
-    : 'Copy, then paste into Reminders or Notes. Plain lines become one reminder per line.';
+  if (nothingLeft) {
+    help.textContent = 'Everything is unchecked, so there is nothing to send yet.';
+  } else {
+    help.textContent = 'Uncheck anything you already have. ' + (navigator.share
+      ? 'On iPhone or Mac, Share sends the rest to Reminders or Notes, one line per item.'
+      : 'Copy, then paste the rest into Reminders or Notes, one line per item.');
+  }
   body.appendChild(help);
 
   var footer = document.createElement('div');
@@ -2884,11 +3051,17 @@ function copyListText() {
   }
 }
 function fallbackCopy() {
-  var ta = document.getElementById('listPreview');
-  if (!ta) { showToast('Could not copy to clipboard'); return; }
+  var ta = document.createElement('textarea');
+  ta.value = buildListText().text;
+  ta.setAttribute('aria-hidden', 'true');
+  ta.style.position = 'fixed';
+  ta.style.top = '-1000px';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
   ta.focus(); ta.select();
   var ok = false;
   try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
   showToast(ok ? 'Copied to clipboard' : 'Could not copy to clipboard');
 }
 function shareListText() {
