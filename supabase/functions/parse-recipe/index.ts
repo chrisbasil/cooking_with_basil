@@ -69,6 +69,29 @@ function errorResponse(status: number, error: string, detail?: unknown) {
   });
 }
 
+// ─── Auth ───────────────────────────────────────────────────────────────
+// The gateway's verify_jwt doesn't apply to publishable keys, so check the
+// caller's session with Supabase Auth before doing any work.
+async function isSignedIn(req: Request): Promise<boolean> {
+  const authHeader = req.headers.get("Authorization");
+  const apikey = req.headers.get("apikey");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!authHeader?.startsWith("Bearer ") || !apikey || !supabaseUrl) {
+    return false;
+  }
+  try {
+    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { Authorization: authHeader, apikey },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return false;
+    const user = await res.json();
+    return typeof user?.id === "string" && user.id.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 // ─── URL fetch (absorbs fetch-recipe) ───────────────────────────────────
 async function fetchUrl(url: string): Promise<string> {
   let parsed: URL;
@@ -546,6 +569,9 @@ serve(async (req) => {
   }
   if (req.method !== "POST") {
     return errorResponse(405, "Method not allowed");
+  }
+  if (!(await isSignedIn(req))) {
+    return errorResponse(401, "Sign in to import recipes");
   }
 
   let body: ParseRequest;

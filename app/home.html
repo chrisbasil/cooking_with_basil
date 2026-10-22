@@ -3422,6 +3422,14 @@ async function fetchUrl() {
 /* ── PDF Processing ──────────────────────────────────────── */
 async function loadPdfJs() {
   if (window.pdfjsLib) return;
+  // Workers can't take an integrity attribute, so fetch the worker with SRI and
+  // hand pdf.js a blob URL of the verified bytes.
+  var workerRes = await fetch('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js', {
+    integrity: 'sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2',
+    mode: 'cors'
+  });
+  if (!workerRes.ok) throw new Error('Failed to load pdf.js worker');
+  var workerUrl = URL.createObjectURL(await workerRes.blob());
   var script = document.createElement('script');
   script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
   script.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
@@ -3431,8 +3439,7 @@ async function loadPdfJs() {
     script.onload = resolve;
     script.onerror = function() { reject(new Error('Failed to load pdf.js')); };
   });
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 }
 
 function onPdfSelected() {
