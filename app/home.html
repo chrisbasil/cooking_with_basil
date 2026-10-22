@@ -1888,7 +1888,7 @@ body.has-selection { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0
 </div>
 
 <!-- Supabase Client -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js" integrity="sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R" crossorigin="anonymous"></script>
 
 <script>
 /* ══════════════════════════════════════════════════════════════
@@ -3423,14 +3423,16 @@ async function fetchUrl() {
 async function loadPdfJs() {
   if (window.pdfjsLib) return;
   var script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+  script.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+  script.crossOrigin = 'anonymous';
   document.head.appendChild(script);
   await new Promise(function(resolve, reject) {
     script.onload = resolve;
     script.onerror = function() { reject(new Error('Failed to load pdf.js')); };
   });
   window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
 
 function onPdfSelected() {
@@ -3451,7 +3453,7 @@ function onPdfSelected() {
 async function extractPdfText(file) {
   await loadPdfJs();
   var arrayBuf = await file.arrayBuffer();
-  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuf }).promise;
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuf, isEvalSupported: false }).promise;
   var allText = [];
   for (var p = 1; p <= pdf.numPages; p++) {
     var page = await pdf.getPage(p);
@@ -3465,7 +3467,7 @@ async function extractPdfText(file) {
 async function extractPdfImages(file, maxPages) {
   await loadPdfJs();
   var arrayBuf = await file.arrayBuffer();
-  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuf }).promise;
+  var pdf = await window.pdfjsLib.getDocument({ data: arrayBuf, isEvalSupported: false }).promise;
   var pages = Math.min(pdf.numPages, maxPages);
   var images = [];
   for (var p = 1; p <= pages; p++) {
