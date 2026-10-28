@@ -3368,6 +3368,12 @@ async function invokeParser(req) {
   }
   if (!res.data) throw new Error('Parser returned no data');
   if (res.data.error) throw new Error(res.data.error);
+  // A page with no recipe on it still parses, just to an empty recipe.
+  var parsed = res.data.recipe || {};
+  if (!parsed.title && !parsed.ingredients) {
+    var why = Array.isArray(res.data.warnings) && res.data.warnings[0];
+    throw new Error('No recipe found in that source.' + (why ? ' ' + why : ''));
+  }
   return res.data;
 }
 
@@ -3397,6 +3403,7 @@ async function fetchUrl() {
   var fallbackEl = document.getElementById('urlFallback');
   statusEl.textContent = 'Fetching & parsing…';
   fallbackEl.style.display = 'none';
+  wizardParsed = {};
   wizardSourceInputPreview = url;
 
   try {
